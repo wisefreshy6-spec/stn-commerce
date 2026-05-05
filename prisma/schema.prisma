@@ -26,33 +26,103 @@ enum AuthProvider {
   GOOGLE
 }
 
-model User {
-  id                  String               @id @default(cuid())
-  firstName           String?
-  lastName            String?
-  email               String               @unique
-  phone               String?
-  address             String?
-  country             String?
-  city                String?
-  passwordHash        String?
-  role                UserRole             @default(CUSTOMER)
-  status              AccountStatus        @default(PENDING)
-  authProvider        AuthProvider         @default(CREDENTIALS)
-  onboardingCompleted Boolean              @default(false)
-  emailVerified       Boolean              @default(false)
-  emailVerifiedAt     DateTime?
-  phoneVerified       Boolean              @default(false)
-  phoneVerifiedAt     DateTime?
-  marketingOptIn      Boolean              @default(false)
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
+enum StoreSection {
+  FAST_FOOD
+  HARDWARE
+  ONLINE_STORE
+  EXCLUSIVE_STORE
+}
 
-  dataRequests        DataRequest[]
-  supportTickets      SupportTicket[]      @relation("CustomerTickets")
-  assignedTickets     SupportTicket[]      @relation("AssignedTickets")
-  verificationTokens  VerificationToken[]
-  passwordResetTokens PasswordResetToken[]
+enum ProductStatus {
+  ACTIVE
+  HIDDEN
+  OUT_OF_STOCK
+  DELETED
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  AWAITING_DELIVERY
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  CASH
+  MPESA
+  CARD
+  PAYPAL
+}
+
+enum SupportTicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum SupportTicketPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum PromoDiscountType {
+  PERCENT
+  FIXED
+}
+
+enum PaymentProvider {
+  CASH
+  MPESA
+  PAYPAL
+  WISE
+  CARD
+}
+
+model User {
+  id                   String        @id @default(cuid())
+  firstName            String?
+  lastName             String?
+  email                String        @unique
+  phone                String?
+  address              String?
+  country              String?
+  city                 String?
+  passwordHash         String?
+  role                 UserRole      @default(CUSTOMER)
+  status               AccountStatus @default(PENDING)
+  authProvider         AuthProvider  @default(CREDENTIALS)
+  emailVerified        Boolean       @default(false)
+  emailVerifiedAt      DateTime?
+  phoneVerified        Boolean       @default(false)
+  phoneVerifiedAt      DateTime?
+  onboardingCompleted  Boolean       @default(false)
+  marketingOptIn       Boolean       @default(false)
+  newsletterSubscribed Boolean       @default(false)
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+
+  dataRequests          DataRequest[]
+  supportTickets        SupportTicket[]        @relation("CustomerTickets")
+  assignedTickets       SupportTicket[]        @relation("AssignedTickets")
+  supportTicketMessages SupportTicketMessage[]
+  supportFeedbacks      SupportFeedback[]
+  verificationTokens    VerificationToken[]
+  passwordResetTokens   PasswordResetToken[]
+  orders                Order[]
+  payments              Payment[]
+  reviews               ProductReview[]
 }
 
 model DataRequest {
@@ -64,23 +134,44 @@ model DataRequest {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model SupportTicket {
-  id           String   @id @default(cuid())
+  id           String                @id @default(cuid())
   customerId   String
   assignedToId String?
   subject      String
   category     String
   message      String
-  status       String   @default("OPEN")
-  priority     String   @default("NORMAL")
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  status       SupportTicketStatus   @default(OPEN)
+  priority     SupportTicketPriority @default(NORMAL)
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
 
-  customer     User     @relation("CustomerTickets", fields: [customerId], references: [id], onDelete: Cascade)
-  assignedTo   User?    @relation("AssignedTickets", fields: [assignedToId], references: [id], onDelete: SetNull)
+  customer   User                   @relation("CustomerTickets", fields: [customerId], references: [id], onDelete: Cascade)
+  assignedTo User?                  @relation("AssignedTickets", fields: [assignedToId], references: [id], onDelete: SetNull)
+  messages   SupportTicketMessage[]
+  feedback   SupportFeedback?
+
+  @@index([customerId])
+  @@index([assignedToId])
+  @@index([status])
+  @@index([priority])
+}
+
+model SupportTicketMessage {
+  id        String   @id @default(cuid())
+  ticketId  String
+  senderId  String
+  message   String
+  createdAt DateTime @default(now())
+
+  ticket SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  sender User          @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+  @@index([senderId])
 }
 
 model VerificationToken {
@@ -90,7 +181,7 @@ model VerificationToken {
   expiresAt DateTime
   createdAt DateTime @default(now())
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([expiresAt])
@@ -103,8 +194,337 @@ model PasswordResetToken {
   expiresAt DateTime
   createdAt DateTime @default(now())
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([expiresAt])
+}
+
+model Product {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+  price       Decimal @db.Decimal(10, 2)
+
+  imageUrl  String?
+  imageUrls String[] @default([])
+
+  barcode String? @unique
+
+  section     StoreSection
+  category    String?
+  subCategory String?
+
+  brand          String?
+  warrantyMonths Int?
+
+  stock  Int           @default(0)
+  status ProductStatus @default(ACTIVE)
+
+  sizes  String[] @default([])
+  colors String[] @default([])
+
+  keyFeatures    String[] @default([])
+  specifications Json?
+
+  packageItems String[] @default([])
+  offerText    String?
+
+  discountPercent Int @default(0)
+
+  reviews    ProductReview[]
+  orderItems OrderItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([section])
+  @@index([status])
+  @@index([category])
+}
+
+model Order {
+  id              String        @id @default(cuid())
+  userId          String
+  invoiceNumber   String        @unique
+  status          OrderStatus   @default(PENDING)
+  paymentStatus   PaymentStatus @default(PENDING)
+  totalItems      Int
+  subtotal        Decimal       @db.Decimal(10, 2)
+  deliveryFee     Decimal       @db.Decimal(10, 2)
+  promoCode       String?
+  discountAmount  Decimal       @default(0) @db.Decimal(10, 2)
+  totalAmount     Decimal       @db.Decimal(10, 2)
+  deliveryArea    String
+  deliveryAddress String?
+  paymentMethod   PaymentMethod @default(CASH)
+  stockReduced    Boolean       @default(false)
+  riskStatus      String        @default("CLEAR")
+  riskReason      String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  user     User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items    OrderItem[]
+  payments Payment[]
+
+  @@index([userId])
+  @@index([invoiceNumber])
+  @@index([status])
+  @@index([paymentStatus])
+}
+
+model OrderItem {
+  id        String   @id @default(cuid())
+  orderId   String
+  productId String
+  name      String
+  price     Decimal  @db.Decimal(10, 2)
+  quantity  Int
+  size      String?
+  color     String?
+  lineTotal Decimal  @db.Decimal(10, 2)
+  createdAt DateTime @default(now())
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+model Payment {
+  id String @id @default(cuid())
+
+  orderId String
+  userId  String?
+
+  provider PaymentProvider
+  method   PaymentMethod
+  status   PaymentStatus   @default(PENDING)
+
+  amount   Decimal @db.Decimal(10, 2)
+  currency String  @default("KES")
+
+  checkoutRequestId String?
+  merchantRequestId String?
+  transactionId     String?
+  paypalOrderId     String?
+  paypalCaptureId   String?
+  wiseReference     String?
+
+  phone         String?
+  payerEmail    String?
+  failureReason String?
+  rawResponse   Json?
+
+  paidAt    DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  user  User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@index([userId])
+  @@index([provider])
+  @@index([status])
+  @@index([checkoutRequestId])
+  @@index([transactionId])
+}
+
+model Expense {
+  id        String   @id @default(cuid())
+  title     String
+  amount    Float
+  category  String
+  createdAt DateTime @default(now())
+}
+
+model NewsletterSubscriber {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  phone     String?
+  userId    String?
+  createdAt DateTime @default(now())
+}
+
+model SiteSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+}
+
+model SiteBanner {
+  id         String    @id @default(cuid())
+  title      String
+  message    String
+  imageUrl   String?
+  linkUrl    String?
+  buttonText String?
+  placement  String    @default("HOME")
+  isActive   Boolean   @default(true)
+  startsAt   DateTime?
+  endsAt     DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([placement])
+  @@index([isActive])
+}
+
+model PromoCode {
+  id            String            @id @default(cuid())
+  code          String            @unique
+  description   String?
+  discountType  PromoDiscountType
+  discountValue Decimal           @db.Decimal(10, 2)
+  minOrderValue Decimal?          @db.Decimal(10, 2)
+  maxDiscount   Decimal?          @db.Decimal(10, 2)
+  usageLimit    Int?
+  usedCount     Int               @default(0)
+  isActive      Boolean           @default(true)
+  startsAt      DateTime?
+  endsAt        DateTime?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  @@index([code])
+  @@index([isActive])
+}
+
+model ProductReview {
+  id         String   @id @default(cuid())
+  productId  String
+  userId     String
+  rating     Int
+  title      String?
+  comment    String?
+  imageUrl   String?
+  videoUrl   String?
+  isApproved Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  verified   Boolean  @default(false)
+
+  product Product @relation(fields: [productId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@unique([productId, userId])
+  @@index([productId])
+  @@index([userId])
+}
+
+model SupportFeedback {
+  id        String   @id @default(cuid())
+  ticketId  String   @unique
+  userId    String
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ticket SupportTicket @relation(fields: [ticketId], references: [id])
+  user   User          @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model BannerClick {
+  id        String   @id @default(cuid())
+  bannerId  String
+  placement String
+  createdAt DateTime @default(now())
+
+  @@index([bannerId])
+  @@index([placement])
+  @@index([createdAt])
+}
+
+model MobileCategory {
+  id        String   @id @default(cuid())
+  name      String
+  icon      String?  // e.g. /category-icons/phones.png
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+
+  panels    MobileCategoryPanel[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model MobileCategoryPanel {
+  id           String   @id @default(cuid())
+  title        String
+  categoryId   String
+  sortOrder    Int      @default(0)
+  isActive     Boolean  @default(true)
+
+  category     MobileCategory @relation(fields: [categoryId], references: [id])
+  items        MobileCategoryItem[]
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model MobileCategoryItem {
+  id         String   @id @default(cuid())
+  name       String
+  image      String?  // brand icon or category image
+  targetType String   // "CATEGORY" | "SUBCATEGORY" | "BRAND"
+  targetValue String  // e.g. "Phones", "Samsung", "Fridges"
+
+  panelId    String
+  sortOrder  Int      @default(0)
+  isActive   Boolean  @default(true)
+
+  panel      MobileCategoryPanel @relation(fields: [panelId], references: [id])
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model MobileSection {
+  id        String   @id @default(cuid())
+  title     String
+  type      String   // "FLASH", "DEALS", "RECOMMENDED", "NORMAL"
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+
+  items     MobileSectionItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model MobileSectionItem {
+  id          String @id @default(cuid())
+  name        String
+  image       String?
+  targetType  String // CATEGORY / SUBCATEGORY / BRAND / DEAL
+  targetValue String
+
+  sectionId   String
+  sortOrder   Int    @default(0)
+  isActive    Boolean @default(true)
+
+  section     MobileSection @relation(fields: [sectionId], references: [id])
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  type      String   // ORDER, PAYMENT, STOCK, REVIEW, SECURITY
+  title     String
+  message   String
+  link      String?  // where admin/user can go
+  userId    String?  // null = admin/global notification
+  isRead    Boolean  @default(false)
+
+  createdAt DateTime @default(now())
 }

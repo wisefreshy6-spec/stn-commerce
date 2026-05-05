@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { db } from "@/lib/db";
+import { resolveRoleFromEmail } from "@/lib/auth/admin";
 import { parseSessionValue, SESSION_COOKIE_NAME } from "@/lib/auth/session";
 
 export async function GET() {
@@ -39,6 +40,32 @@ export async function GET() {
 
     if (!user) {
       return NextResponse.json({ user: null }, { status: 401 });
+    }
+
+    const resolvedRole = resolveRoleFromEmail(user.email);
+
+    if (resolvedRole !== user.role) {
+      const updatedUser = await db.user.update({
+        where: { id: user.id },
+        data: { role: resolvedRole },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          role: true,
+          country: true,
+          city: true,
+          phone: true,
+          address: true,
+          emailVerified: true,
+          status: true,
+          authProvider: true,
+          onboardingCompleted: true,
+        },
+      });
+
+      return NextResponse.json({ user: updatedUser });
     }
 
     return NextResponse.json({ user });

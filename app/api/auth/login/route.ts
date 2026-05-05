@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { db } from "@/lib/db";
 import { verifyPassword } from "@/lib/auth/password";
+import { resolveRoleFromEmail } from "@/lib/auth/admin";
 import {
   createSessionValue,
   getSessionCookieOptions,
@@ -92,12 +93,32 @@ export async function POST(request: Request) {
       );
     }
 
+    const resolvedRole = resolveRoleFromEmail(user.email);
+
+    const updatedUser =
+      resolvedRole !== user.role
+        ? await db.user.update({
+            where: { id: user.id },
+            data: { role: resolvedRole },
+            select: {
+              id: true,
+              email: true,
+              role: true,
+              firstName: true,
+              lastName: true,
+              authProvider: true,
+              emailVerified: true,
+              onboardingCompleted: true,
+            },
+          })
+        : user;
+
     const sessionValue = createSessionValue({
-      userId: user.id,
-      role: user.role,
-      emailVerified: user.emailVerified,
-      onboardingCompleted: user.onboardingCompleted,
-      authProvider: user.authProvider,
+      userId: updatedUser.id,
+      role: updatedUser.role,
+      emailVerified: updatedUser.emailVerified,
+      onboardingCompleted: updatedUser.onboardingCompleted,
+      authProvider: updatedUser.authProvider,
       rememberMe,
     });
 
@@ -111,13 +132,13 @@ export async function POST(request: Request) {
     return NextResponse.json({
       message: "Login successful.",
       user: {
-        id: user.id,
-        email: user.email,
-        role: user.role,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        authProvider: user.authProvider,
-        onboardingCompleted: user.onboardingCompleted,
+        id: updatedUser.id,
+        email: updatedUser.email,
+        role: updatedUser.role,
+        firstName: updatedUser.firstName,
+        lastName: updatedUser.lastName,
+        authProvider: updatedUser.authProvider,
+        onboardingCompleted: updatedUser.onboardingCompleted,
       },
     });
   } catch (error) {

@@ -1,6 +1,7 @@
 import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
 import { db } from "@/lib/db";
+import { resolveRoleFromEmail } from "@/lib/auth/admin";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   session: {
@@ -23,15 +24,23 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return false;
       }
 
+      const resolvedRole = resolveRoleFromEmail(email);
+
       const existingUser = await db.user.findUnique({
         where: { email },
         select: {
           id: true,
           authProvider: true,
+          role: true,
         },
       });
 
       if (existingUser && existingUser.authProvider === "CREDENTIALS") {
+        await db.user.update({
+          where: { id: existingUser.id },
+          data: { role: resolvedRole },
+        });
+
         return "/auth/login?error=google_account_conflict";
       }
 
@@ -52,8 +61,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             emailVerified: true,
             emailVerifiedAt: new Date(),
             status: "ACTIVE",
-            role: "CUSTOMER",
+            role: resolvedRole,
           },
+        });
+      } else if (existingUser.role !== resolvedRole) {
+        await db.user.update({
+          where: { id: existingUser.id },
+          data: { role: resolvedRole },
         });
       }
 
@@ -70,6 +84,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           where: { email: token.email },
           select: {
             id: true,
+            email: true,
             role: true,
             onboardingCompleted: true,
             authProvider: true,
@@ -78,8 +93,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         });
 
         if (dbUser) {
+          const resolvedRole = resolveRoleFromEmail(dbUser.email);
+
+          if (resolvedRole !== dbUser.role) {
+            await db.user.update({
+              where: { id: dbUser.id },
+              data: { role: resolvedRole },
+            });
+          }
+
           token.userId = dbUser.id;
-          token.role = dbUser.role;
+          token.role = resolvedRole;
           token.onboardingCompleted = dbUser.onboardingCompleted;
           token.authProvider = dbUser.authProvider;
           token.emailVerified = dbUser.emailVerified;

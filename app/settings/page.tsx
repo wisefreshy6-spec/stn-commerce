@@ -2,11 +2,19 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import LogoutButton from "@/components/auth/LogoutButton";
 import { useRouter } from "next/navigation";
 import {
   ArrowRight,
+  Bell,
+  Headset,
   Lock,
+  MessageCircle,
+  PackageSearch,
+  ReceiptText,
   ShieldCheck,
+  ShoppingBag,
+  Store,
   UserCircle2,
   WalletCards,
 } from "lucide-react";
@@ -258,301 +266,558 @@ export default function SettingsPage() {
   const isGoogleOnly = user.authProvider === "GOOGLE";
 
   return (
-    <ProtectedShell
-      badge="Account settings"
-      title="Manage your account"
-      subtitle="Review and update contact details, phone, provider type, account state, and password options."
-    >
-      <section className="grid gap-6 lg:grid-cols-[1fr_1fr]">
-        <div className="rounded-[32px] border border-white/50 bg-white/90 p-8 shadow-xl ring-1 ring-slate-200/70 backdrop-blur">
-          <h2 className="text-2xl font-black tracking-tight text-slate-950">
-            Update profile
-          </h2>
+  <ProtectedShell
+    badge="Account settings"
+    title="Manage your account"
+    subtitle="Review and update contact details, phone, provider type, account state, and password options."
+  >
+    {/* MOBILE ACCOUNT UI ONLY */}
+    <section className="space-y-4 lg:hidden">
+      <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-wide text-orange-600">
+          Account
+        </p>
 
-          <p className="mt-2 text-sm leading-6 text-slate-600">
-            Update your contact details. Ownership names are locked after
-            account setup and will later require verification to change.
+        <h2 className="mt-3 text-2xl font-black text-slate-950">
+          Welcome {user.firstName || "there"}!
+        </h2>
+
+        <p className="mt-1 text-xs text-slate-500 break-all">
+          {user.email}
+        </p>
+      </div>
+
+      <div className="rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+          Quick actions
+        </p>
+
+        <div className="mt-4 grid grid-cols-4 gap-2">
+  <Link
+    href="/orders"
+    className="flex flex-col items-center rounded-xl bg-orange-50 p-2 text-[11px] font-black text-orange-700"
+  >
+    <ReceiptText className="mb-1 h-4 w-4" />
+    Orders
+  </Link>
+
+  <Link
+    href="/online-store"
+    className="flex flex-col items-center rounded-xl bg-green-50 p-2 text-[11px] font-black text-green-700"
+  >
+    <ShoppingBag className="mb-1 h-4 w-4" />
+    Shop
+  </Link>
+
+  <Link
+    href="/support"
+    className="flex flex-col items-center rounded-xl bg-blue-50 p-2 text-[11px] font-black text-blue-700"
+  >
+    <Headset className="mb-1 h-4 w-4" />
+    Help
+  </Link>
+
+  <Link
+    href="/cart"
+    className="flex flex-col items-center rounded-xl bg-purple-50 p-2 text-[11px] font-black text-purple-700"
+  >
+    <WalletCards className="mb-1 h-4 w-4" />
+    Pay
+  </Link>
+</div>      
+</div>
+
+      <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-100 px-4 py-3">
+          <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+            Support
           </p>
-
-          <form className="mt-6 space-y-4" onSubmit={handleSaveProfile}>
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-              <div>
-                <span className="font-semibold">Ownership name:</span>{" "}
-                {fullName}
-              </div>
-              <p className="mt-1 text-xs text-slate-500">
-                Names are locked for account ownership protection. Later,
-                verified name changes can be handled through email/phone OTP or
-                document review.
-              </p>
-            </div>
-
-            <select
-              className="h-11 w-full rounded-2xl border border-slate-300 bg-white px-4 text-sm outline-none transition focus:border-slate-950"
-              value={country}
-              onChange={(e) => handleCountryChange(e.target.value)}
-            >
-              {EAST_AFRICA_COUNTRIES.map((countryItem) => (
-                <option key={countryItem} value={countryItem}>
-                  {countryItem}
-                </option>
-              ))}
-            </select>
-
-            <div>
-              <label className="mb-2 block text-sm font-medium text-slate-700">
-                Phone number
-              </label>
-
-              <div className="flex overflow-hidden rounded-2xl border border-slate-300 bg-white focus-within:border-slate-950">
-                <div className="flex min-w-[88px] items-center justify-center bg-slate-100 px-3 text-sm font-medium text-slate-700">
-                  {selectedPhoneRule.dialCode}
-                </div>
-
-                <input
-                  inputMode="numeric"
-                  className="h-11 w-full px-4 text-sm outline-none"
-                  placeholder={selectedPhoneRule.example}
-                  value={phone}
-                  onChange={(e) => handlePhoneChange(e.target.value)}
-                />
-              </div>
-
-              <p className="mt-1 text-xs text-slate-500">
-                Enter exactly {selectedPhoneRule.localDigits} digits after{" "}
-                {selectedPhoneRule.dialCode}.
-              </p>
-
-              {phoneError ? (
-                <p className="mt-1 text-sm text-red-600">{phoneError}</p>
-              ) : null}
-            </div>
-
-            <input
-              className="h-11 w-full rounded-2xl border border-slate-300 bg-white px-4 text-sm outline-none transition focus:border-slate-950"
-              placeholder="Street address"
-              value={address}
-              onChange={(e) => {
-                setAddress(e.target.value);
-                setFormError("");
-                setFormSuccess("");
-              }}
-            />
-
-            <input
-              className="h-11 w-full rounded-2xl border border-slate-300 bg-white px-4 text-sm outline-none transition focus:border-slate-950"
-              placeholder="City / Town"
-              value={city}
-              onChange={(e) => {
-                setCity(e.target.value);
-                setFormError("");
-                setFormSuccess("");
-              }}
-            />
-
-            {formError ? (
-              <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-                {formError}
-              </div>
-            ) : null}
-
-            {formSuccess ? (
-              <div className="rounded-2xl border border-green-200 bg-green-50 p-4 text-sm text-green-700">
-                {formSuccess}
-              </div>
-            ) : null}
-
-            <button
-              type="submit"
-              disabled={saving || !formValid}
-              className="h-11 w-full rounded-2xl bg-slate-950 text-sm font-medium text-white shadow-lg shadow-slate-900/10 transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
-            >
-              {saving ? "Saving profile..." : "Save profile changes"}
-            </button>
-          </form>
         </div>
 
-        <div className="space-y-6">
-          <div className="rounded-[32px] border border-white/50 bg-white/90 p-8 shadow-xl ring-1 ring-slate-200/70 backdrop-blur">
-            <h2 className="text-2xl font-black tracking-tight text-slate-950">
-              Current profile summary
-            </h2>
+        <Link
+          href="/support"
+          className="flex items-center justify-between px-4 py-4 text-sm font-bold text-slate-800"
+        >
+          <span className="flex items-center">
+            <MessageCircle className="mr-3 h-5 w-5 text-orange-600" />
+            Live Chat
+          </span>
+          <span className="text-slate-400">›</span>
+        </Link>
 
-            <div className="mt-6 space-y-4 text-sm text-slate-700">
-              <div className="rounded-2xl bg-slate-50 p-4">
-                <span className="font-semibold">Name:</span> {fullName}
-              </div>
+        <Link
+          href="/support/my-tickets"
+          className="flex items-center justify-between border-t border-slate-100 px-4 py-4 text-sm font-bold text-slate-800"
+        >
+          <span className="flex items-center">
+            <Headset className="mr-3 h-5 w-5 text-blue-600" />
+            My Tickets
+          </span>
+          <span className="text-slate-400">›</span>
+        </Link>
+      </div>
 
-              <div className="rounded-2xl bg-slate-50 p-4">
-                <span className="font-semibold">Email:</span> {user.email}
-              </div>
+      <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-100 px-4 py-3">
+          <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+            Your Stores
+          </p>
+        </div>
+        
+        <Link
+          href="/online-store"
+          className="flex items-center justify-between px-4 py-4 text-sm font-bold text-slate-800"
+        >
+          <span className="flex items-center">
+            <Store className="mr-3 h-5 w-5 text-orange-600" />
+            Online Store
+          </span>
+          <span className="text-slate-400">›</span>
+        </Link>
 
-              <div className="rounded-2xl bg-slate-50 p-4">
-                <span className="font-semibold">Phone:</span>{" "}
-                {user.phone || "Not added"}
-              </div>
+        <Link
+          href="/exclusive-store"
+          className="flex items-center justify-between border-t border-slate-100 px-4 py-4 text-sm font-bold text-slate-800"
+        >
+          <span className="flex items-center">
+            <Store className="mr-3 h-5 w-5 text-purple-600" />
+            Exclusive Store
+          </span>
+          <span className="text-slate-400">›</span>
+        </Link>
 
-              <div className="rounded-2xl bg-slate-50 p-4">
-                <span className="font-semibold">Country:</span>{" "}
-                {user.country || "Not set"}
-              </div>
+        <Link
+          href="/fast-food"
+          className="flex items-center justify-between border-t border-slate-100 px-4 py-4 text-sm font-bold text-slate-800"
+        >
+          <span className="flex items-center">
+            <Store className="mr-3 h-5 w-5 text-green-600" />
+            Fast Food
+          </span>
+          <span className="text-slate-400">›</span>
+        </Link>
 
-              <div className="rounded-2xl bg-slate-50 p-4">
-                <span className="font-semibold">City:</span>{" "}
-                {user.city || "Not set"}
-              </div>
+        <Link
+          href="/hardware"
+          className="flex items-center justify-between border-t border-slate-100 px-4 py-4 text-sm font-bold text-slate-800"
+        >
+          <span className="flex items-center">
+            <Store className="mr-3 h-5 w-5 text-slate-600" />
+            Hardware
+          </span>
+          <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-black text-amber-700">
+            Soon
+          </span>
+        </Link>
+      </div>
 
-              <div className="rounded-2xl bg-slate-50 p-4">
-                <span className="font-semibold">Address:</span>{" "}
-                {user.address || "Not set"}
-              </div>
+      <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-100 px-4 py-3">
+          <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+            My Account
+          </p>
+        </div>
+
+        <Link
+          href="/orders"
+          className="flex items-center justify-between px-4 py-4 text-sm font-bold text-slate-800"
+        >
+          <span className="flex items-center">
+            <ReceiptText className="mr-3 h-5 w-5 text-slate-700" />
+            Orders
+          </span>
+          <span className="text-slate-400">›</span>
+        </Link>
+
+        <Link
+          href="/auth/complete-profile"
+          className="flex items-center justify-between border-t border-slate-100 px-4 py-4 text-sm font-bold text-slate-800"
+        >
+          <span className="flex items-center">
+            <UserCircle2 className="mr-3 h-5 w-5 text-slate-700" />
+            Profile
+          </span>
+          <span className="text-slate-400">›</span>
+        </Link>
+
+        <Link
+          href={isGoogleOnly ? "/auth/set-password" : "/auth/change-password"}
+          className="flex items-center justify-between border-t border-slate-100 px-4 py-4 text-sm font-bold text-slate-800"
+        >
+          <span className="flex items-center">
+            <Lock className="mr-3 h-5 w-5 text-slate-700" />
+            Security / Password
+          </span>
+          <span className="text-slate-400">›</span>
+        </Link>
+
+        <button
+          type="button"
+          onClick={handleRequestData}
+          disabled={requestingData}
+          className="flex w-full items-center justify-between border-t border-slate-100 px-4 py-4 text-left text-sm font-bold text-slate-800 disabled:opacity-60"
+        >
+          <span className="flex items-center">
+            <WalletCards className="mr-3 h-5 w-5 text-slate-700" />
+            {requestingData ? "Requesting data..." : "Request account data"}
+          </span>
+          <span className="text-slate-400">›</span>
+        </button>
+      
+      
+        <Link
+          href="/settings"
+          className="flex items-center justify-between px-4 py-4 text-sm font-bold text-slate-800"
+        >
+          <span className="flex items-center">
+            <UserCircle2 className="mr-3 h-5 w-5 text-slate-700" />
+            Account Details
+          </span>
+          <span className="text-slate-400">›</span>
+        </Link>
+
+        <Link
+          href="/payments"
+          className="flex items-center justify-between border-t border-slate-100 px-4 py-4 text-sm font-bold text-slate-800"
+        >
+          <span className="flex items-center">
+            <WalletCards className="mr-3 h-5 w-5 text-slate-700" />
+            Payment Settings
+          </span>
+          <span className="text-slate-400">›</span>
+        </Link>
+
+        <Link
+          href="/auth/change-password"
+          className="flex items-center justify-between border-t border-slate-100 px-4 py-4 text-sm font-bold text-slate-800"
+        >
+          <span className="flex items-center">
+            <ShieldCheck className="mr-3 h-5 w-5 text-slate-700" />
+            Security
+          </span>
+          <span className="text-slate-400">›</span>
+        </Link>
+
+        <Link
+          href="/notifications"
+          className="flex items-center justify-between border-t border-slate-100 px-4 py-4 text-sm font-bold text-slate-800"
+        >
+          <span className="flex items-center">
+            <Bell className="mr-3 h-5 w-5 text-slate-700" />
+            Notifications
+          </span>
+          <span className="text-slate-400">›</span>
+        </Link>
+      </div>
+
+      {dataRequestError ? (
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-700">
+          {dataRequestError}
+        </div>
+      ) : null}
+
+      {dataRequestSuccess ? (
+        <div className="rounded-2xl border border-green-200 bg-green-50 p-4 text-sm font-bold text-green-700">
+          {dataRequestSuccess}
+        </div>
+      ) : null}
+
+      <div className="pb-4 text-center">
+        <LogoutButton />
+      </div>
+    </section>
+
+    {/* DESKTOP CURRENT UI ONLY */}
+    <section className="hidden gap-6 lg:grid lg:grid-cols-[1fr_1fr]">
+      <div className="rounded-[32px] border border-white/50 bg-white/90 p-8 shadow-xl ring-1 ring-slate-200/70 backdrop-blur">
+        <h2 className="text-2xl font-black tracking-tight text-slate-950">
+          Update profile
+        </h2>
+
+        <p className="mt-2 text-sm leading-6 text-slate-600">
+          Update your contact details. Ownership names are locked after
+          account setup and will later require verification to change.
+        </p>
+
+        <form className="mt-6 space-y-4" onSubmit={handleSaveProfile}>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+            <div>
+              <span className="font-semibold">Ownership name:</span>{" "}
+              {fullName}
             </div>
+            <p className="mt-1 text-xs text-slate-500">
+              Names are locked for account ownership protection. Later,
+              verified name changes can be handled through email/phone OTP or
+              document review.
+            </p>
           </div>
 
-          <div className="rounded-[32px] border border-white/50 bg-white/90 p-8 shadow-xl ring-1 ring-slate-200/70 backdrop-blur">
-            <h2 className="text-2xl font-black tracking-tight text-slate-950">
-              Account status
-            </h2>
+          <select
+            className="h-11 w-full rounded-2xl border border-slate-300 bg-white px-4 text-sm outline-none transition focus:border-slate-950"
+            value={country}
+            onChange={(e) => handleCountryChange(e.target.value)}
+          >
+            {EAST_AFRICA_COUNTRIES.map((countryItem) => (
+              <option key={countryItem} value={countryItem}>
+                {countryItem}
+              </option>
+            ))}
+          </select>
 
-            <div className="mt-6 space-y-4 text-sm text-slate-700">
-              <div className="rounded-2xl bg-slate-50 p-4">
-                <span className="font-semibold">Auth provider:</span>{" "}
-                {user.authProvider}
+          <div>
+            <label className="mb-2 block text-sm font-medium text-slate-700">
+              Phone number
+            </label>
+
+            <div className="flex overflow-hidden rounded-2xl border border-slate-300 bg-white focus-within:border-slate-950">
+              <div className="flex min-w-[88px] items-center justify-center bg-slate-100 px-3 text-sm font-medium text-slate-700">
+                {selectedPhoneRule.dialCode}
               </div>
 
-              <div className="rounded-2xl bg-slate-50 p-4">
-                <span className="font-semibold">Email verified:</span>{" "}
-                {user.emailVerified ? "Yes" : "No"}
-              </div>
-
-              <div className="rounded-2xl bg-slate-50 p-4">
-                <span className="font-semibold">Onboarding completed:</span>{" "}
-                {user.onboardingCompleted ? "Yes" : "No"}
-              </div>
-
-              <div className="rounded-2xl bg-slate-50 p-4">
-                <span className="font-semibold">Role:</span> {user.role}
-              </div>
-
-              <div className="rounded-2xl bg-slate-50 p-4">
-                <span className="font-semibold">Account status:</span>{" "}
-                {user.status}
-              </div>
+              <input
+                inputMode="numeric"
+                className="h-11 w-full px-4 text-sm outline-none"
+                placeholder={selectedPhoneRule.example}
+                value={phone}
+                onChange={(e) => handlePhoneChange(e.target.value)}
+              />
             </div>
-          </div>
 
-          <div className="rounded-[32px] border border-white/50 bg-white/90 p-8 shadow-xl ring-1 ring-slate-200/70 backdrop-blur">
-            <h2 className="text-2xl font-black tracking-tight text-slate-950">
-              Password options
-            </h2>
-
-            {isGoogleOnly ? (
-              <>
-                <p className="mt-4 text-sm leading-6 text-slate-600">
-                  Your account currently uses Google sign-in. You can add a
-                  password if you also want to log in with email and password.
-                </p>
-
-                <Link
-                  href="/auth/set-password"
-                  className="mt-6 inline-flex items-center justify-center rounded-2xl bg-slate-950 px-6 py-3 text-sm font-medium text-white shadow-lg shadow-slate-900/10 transition hover:bg-slate-800"
-                >
-                  Set password <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </>
-            ) : (
-              <>
-                <p className="mt-4 text-sm leading-6 text-slate-600">
-                  Your account already supports password login. More password
-                  tools can be added here later.
-                </p>
-
-                <div className="mt-6 rounded-2xl border border-green-200 bg-green-50 p-4 text-sm text-green-700">
-                  Password login is active for this account.
-                </div>
-              </>
-            )}
-          </div>
-
-          <div className="rounded-[32px] border border-white/50 bg-white/90 p-8 shadow-xl ring-1 ring-slate-200/70 backdrop-blur">
-            <h2 className="text-2xl font-black tracking-tight text-slate-950">
-              Account data request
-            </h2>
-
-            <p className="mt-4 text-sm leading-6 text-slate-600">
-              Request a copy/export of the account data linked to your profile.
-              For now, this creates a pending request for admin/support handling.
+            <p className="mt-1 text-xs text-slate-500">
+              Enter exactly {selectedPhoneRule.localDigits} digits after{" "}
+              {selectedPhoneRule.dialCode}.
             </p>
 
-            {dataRequestError ? (
-              <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-                {dataRequestError}
-              </div>
+            {phoneError ? (
+              <p className="mt-1 text-sm text-red-600">{phoneError}</p>
             ) : null}
-
-            {dataRequestSuccess ? (
-              <div className="mt-4 rounded-2xl border border-green-200 bg-green-50 p-4 text-sm text-green-700">
-                {dataRequestSuccess}
-              </div>
-            ) : null}
-
-            <button
-              type="button"
-              onClick={handleRequestData}
-              disabled={requestingData}
-              className="mt-6 h-11 w-full rounded-2xl bg-slate-950 text-sm font-medium text-white shadow-lg shadow-slate-900/10 transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
-            >
-              {requestingData
-                ? "Submitting request..."
-                : "Request my account data"}
-            </button>
           </div>
 
-          <div className="rounded-[32px] border border-white/50 bg-white/90 p-8 shadow-xl ring-1 ring-slate-200/70 backdrop-blur">
-            <h2 className="text-2xl font-black tracking-tight text-slate-950">
-              Quick actions
-            </h2>
+          <input
+            className="h-11 w-full rounded-2xl border border-slate-300 bg-white px-4 text-sm outline-none transition focus:border-slate-950"
+            placeholder="Street address"
+            value={address}
+            onChange={(e) => {
+              setAddress(e.target.value);
+              setFormError("");
+              setFormSuccess("");
+            }}
+          />
 
-            <div className="mt-6 flex flex-col gap-3">
-              <Link
-                href="/dashboard"
-                className="inline-flex items-center justify-center rounded-2xl border border-slate-300 bg-white px-6 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-              >
-                <UserCircle2 className="mr-2 h-4 w-4" />
-                Back to dashboard
-              </Link>
+          <input
+            className="h-11 w-full rounded-2xl border border-slate-300 bg-white px-4 text-sm outline-none transition focus:border-slate-950"
+            placeholder="City / Town"
+            value={city}
+            onChange={(e) => {
+              setCity(e.target.value);
+              setFormError("");
+              setFormSuccess("");
+            }}
+          />
 
-              {!user.onboardingCompleted ? (
-                <Link
-                  href="/auth/complete-profile"
-                  className="inline-flex items-center justify-center rounded-2xl border border-orange-300 bg-orange-50 px-6 py-3 text-sm font-medium text-orange-700 transition hover:bg-orange-100"
-                >
-                  <WalletCards className="mr-2 h-4 w-4" />
-                  Complete profile
-                </Link>
-              ) : null}
+          {formError ? (
+            <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+              {formError}
+            </div>
+          ) : null}
 
-              <Link
-                href={
-                  isGoogleOnly ? "/auth/set-password" : "/auth/change-password"
-                }
-                className="inline-flex items-center justify-center rounded-2xl border border-slate-300 bg-white px-6 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-              >
-                <Lock className="mr-2 h-4 w-4" />
-                Password tools
-              </Link>
+          {formSuccess ? (
+            <div className="rounded-2xl border border-green-200 bg-green-50 p-4 text-sm text-green-700">
+              {formSuccess}
+            </div>
+          ) : null}
 
-              <Link
-                href="/contact"
-                className="inline-flex items-center justify-center rounded-2xl border border-slate-300 bg-white px-6 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-              >
-                <ShieldCheck className="mr-2 h-4 w-4" />
-                Contact support
-              </Link>
+          <button
+            type="submit"
+            disabled={saving || !formValid}
+            className="h-11 w-full rounded-2xl bg-orange-600 text-sm font-medium text-white shadow-lg shadow-slate-900/10 transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            {saving ? "Saving profile..." : "Save profile changes"}
+          </button>
+        </form>
+      </div>
+
+      <div className="space-y-6">
+        <div className="rounded-[32px] border border-white/50 bg-white/90 p-8 shadow-xl ring-1 ring-slate-200/70 backdrop-blur">
+          <h2 className="text-2xl font-black tracking-tight text-slate-950">
+            Current profile summary
+          </h2>
+
+          <div className="mt-6 space-y-4 text-sm text-slate-700">
+            <div className="rounded-2xl bg-slate-50 p-4">
+              <span className="font-semibold">Name:</span> {fullName}
+            </div>
+
+            <div className="rounded-2xl bg-slate-50 p-4">
+              <span className="font-semibold">Email:</span> {user.email}
+            </div>
+
+            <div className="rounded-2xl bg-slate-50 p-4">
+              <span className="font-semibold">Phone:</span>{" "}
+              {user.phone || "Not added"}
+            </div>
+
+            <div className="rounded-2xl bg-slate-50 p-4">
+              <span className="font-semibold">Country:</span>{" "}
+              {user.country || "Not set"}
+            </div>
+
+            <div className="rounded-2xl bg-slate-50 p-4">
+              <span className="font-semibold">City:</span>{" "}
+              {user.city || "Not set"}
+            </div>
+
+            <div className="rounded-2xl bg-slate-50 p-4">
+              <span className="font-semibold">Address:</span>{" "}
+              {user.address || "Not set"}
             </div>
           </div>
         </div>
-      </section>
-    </ProtectedShell>
-  );
+
+        <div className="rounded-[32px] border border-white/50 bg-white/90 p-8 shadow-xl ring-1 ring-slate-200/70 backdrop-blur">
+          <h2 className="text-2xl font-black tracking-tight text-slate-950">
+            Account status
+          </h2>
+
+          <div className="mt-6 space-y-4 text-sm text-slate-700">
+            <div className="rounded-2xl bg-slate-50 p-4">
+              <span className="font-semibold">Auth provider:</span>{" "}
+              {user.authProvider}
+            </div>
+
+            <div className="rounded-2xl bg-slate-50 p-4">
+              <span className="font-semibold">Email verified:</span>{" "}
+              {user.emailVerified ? "Yes" : "No"}
+            </div>
+
+            <div className="rounded-2xl bg-slate-50 p-4">
+              <span className="font-semibold">Onboarding completed:</span>{" "}
+              {user.onboardingCompleted ? "Yes" : "No"}
+            </div>
+
+            <div className="rounded-2xl bg-slate-50 p-4">
+              <span className="font-semibold">Role:</span> {user.role}
+            </div>
+
+            <div className="rounded-2xl bg-slate-50 p-4">
+              <span className="font-semibold">Account status:</span>{" "}
+              {user.status}
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-[32px] border border-white/50 bg-white/90 p-8 shadow-xl ring-1 ring-slate-200/70 backdrop-blur">
+          <h2 className="text-2xl font-black tracking-tight text-slate-950">
+            Password options
+          </h2>
+
+          {isGoogleOnly ? (
+            <>
+              <p className="mt-4 text-sm leading-6 text-slate-600">
+                Your account currently uses Google sign-in. You can add a
+                password if you also want to log in with email and password.
+              </p>
+
+              <Link
+                href="/auth/set-password"
+                className="mt-6 inline-flex items-center justify-center rounded-2xl bg-slate-950 px-6 py-3 text-sm font-medium text-white shadow-lg shadow-slate-900/10 transition hover:bg-slate-800"
+              >
+                Set password <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </>
+          ) : (
+            <>
+              <p className="mt-4 text-sm leading-6 text-slate-600">
+                Your account already supports password login. More password
+                tools can be added here later.
+              </p>
+
+              <div className="mt-6 rounded-2xl border border-green-200 bg-green-50 p-4 text-sm text-green-700">
+                Password login is active for this account.
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="rounded-[32px] border border-white/50 bg-white/90 p-8 shadow-xl ring-1 ring-slate-200/70 backdrop-blur">
+          <h2 className="text-2xl font-black tracking-tight text-slate-950">
+            Account data request
+          </h2>
+
+          <p className="mt-4 text-sm leading-6 text-slate-600">
+            Request a copy/export of the account data linked to your profile.
+            For now, this creates a pending request for admin/support handling.
+          </p>
+
+          {dataRequestError ? (
+            <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+              {dataRequestError}
+            </div>
+          ) : null}
+
+          {dataRequestSuccess ? (
+            <div className="mt-4 rounded-2xl border border-green-200 bg-green-50 p-4 text-sm text-green-700">
+              {dataRequestSuccess}
+            </div>
+          ) : null}
+
+          <button
+            type="button"
+            onClick={handleRequestData}
+            disabled={requestingData}
+            className="mt-6 h-11 w-full rounded-2xl bg-slate-950 text-sm font-medium text-white shadow-lg shadow-slate-900/10 transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            {requestingData
+              ? "Submitting request..."
+              : "Request my account data"}
+          </button>
+        </div>
+
+        <div className="rounded-[32px] border border-white/50 bg-white/90 p-8 shadow-xl ring-1 ring-slate-200/70 backdrop-blur">
+          <h2 className="text-2xl font-black tracking-tight text-slate-950">
+            Quick actions
+          </h2>
+
+          <div className="mt-6 flex flex-col gap-3">
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center justify-center rounded-2xl border border-slate-300 bg-white px-6 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+            >
+              <UserCircle2 className="mr-2 h-4 w-4" />
+              Back to dashboard
+            </Link>
+
+            {!user.onboardingCompleted ? (
+              <Link
+                href="/auth/complete-profile"
+                className="inline-flex items-center justify-center rounded-2xl border border-orange-300 bg-orange-50 px-6 py-3 text-sm font-medium text-orange-700 transition hover:bg-orange-100"
+              >
+                <WalletCards className="mr-2 h-4 w-4" />
+                Complete profile
+              </Link>
+            ) : null}
+
+            <Link
+              href={
+                isGoogleOnly ? "/auth/set-password" : "/auth/change-password"
+              }
+              className="inline-flex items-center justify-center rounded-2xl border border-slate-300 bg-white px-6 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+            >
+              <Lock className="mr-2 h-4 w-4" />
+              Password tools
+            </Link>
+
+            <Link
+              href="/contact"
+              className="inline-flex items-center justify-center rounded-2xl border border-slate-300 bg-white px-6 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+            >
+              <ShieldCheck className="mr-2 h-4 w-4" />
+              Contact support
+            </Link>
+          </div>
+        </div>
+      </div>
+    </section>
+  </ProtectedShell>
+);
 }

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import FloatingLiveChatButton from "@/components/support/FloatingLiveChatButton";
 import { SessionProvider } from "next-auth/react";
 import "./globals.css";
 
@@ -15,7 +16,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <SessionProvider>{children}</SessionProvider>
+        <SessionProvider>
+          {children}
+          <FloatingLiveChatButton />
+        </SessionProvider>
       </body>
     </html>
   );

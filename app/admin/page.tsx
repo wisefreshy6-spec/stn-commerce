@@ -1,107 +1,148 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
-  ArrowRight,
-  FileText,
-  Headset,
   ShieldCheck,
+  ShoppingBag,
   Users,
+  BarChart3,
+  ClipboardList,
+  Star,
+  Sparkles,
 } from "lucide-react";
 import ProtectedShell from "@/components/layout/ProtectedShell";
+import MaintenanceToggle from "@/components/admin/MaintenanceToggle";
 
-const adminCards = [
+const adminActions = [
   {
-    title: "Data requests",
-    description:
-      "Review customer account data export requests and update their processing status.",
-    href: "/admin/data-requests",
-    icon: FileText,
-  },
-  {
-    title: "Support queue",
-    description:
-      "Support ticket handling will live here once we build the ticket review tools.",
-    href: "#",
-    icon: Headset,
-  },
-  {
-    title: "User management",
-    description:
-      "User status, suspensions, roles, and account controls can be managed here later.",
-    href: "#",
+    title: "Users",
+    description: "Manage all users and accounts.",
+    href: "/admin/users",
     icon: Users,
+  },
+  {
+    title: "Products",
+    description: "Add, edit, and manage store items.",
+    href: "/admin/products",
+    icon: ShoppingBag,
+  },
+  {
+    title: "Product Reviews",
+    description: "Approve reviews, hide spam, and moderate verified feedback.",
+    href: "/admin/reviews",
+    icon: Star,
+  },
+  {
+  title: "Mobile Sections",
+  description: "Control Flash Sales, Deals, Recommended, and New Arrivals.",
+  href: "/admin/mobile-sections",
+  icon: Sparkles,
+ },
+  {
+    title: "Orders",
+    description: "View all orders and invoices.",
+    href: "/admin/orders",
+    icon: ClipboardList,
+  },
+  {
+    title: "Sales analytics",
+    description: "Revenue, profit, and insights dashboard.",
+    href: "/admin/sales",
+    icon: BarChart3,
   },
   {
     title: "Security review",
     description:
-      "Future security logs, account flags, and suspicious activity checks can live here.",
+      "Future security logs, account flags, and suspicious activity checks.",
     href: "#",
     icon: ShieldCheck,
   },
 ];
 
 export default function AdminPage() {
+  const [pendingReviews, setPendingReviews] = useState(0);
+
+  useEffect(() => {
+    const loadPending = async () => {
+      try {
+        const res = await fetch("/api/admin/reviews");
+        const data = await res.json();
+
+        if (res.ok) {
+          const pending = (data.reviews || []).filter(
+            (r: any) => !r.isApproved
+          ).length;
+
+          setPendingReviews(pending);
+        }
+      } catch {
+        // silent fail (optional: log later)
+      }
+    };
+
+    loadPending();
+  }, []);
+
   return (
     <ProtectedShell
-      badge="Admin workspace"
-      title="Admin control center"
-      subtitle="Manage operational tasks, support actions, customer requests, and future security controls from one protected workspace."
+      badge="Admin panel"
+      title="Admin dashboard"
+      subtitle="Control your system, users, products, orders, and analytics from one place."
     >
-      <section className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-        {adminCards.map((item) => {
-          const Icon = item.icon;
+      <section className="space-y-6">
+        <MaintenanceToggle />
 
-          return (
-            <div
-              key={item.title}
-              className="rounded-[28px] border border-white/50 bg-white/90 p-6 shadow-sm ring-1 ring-slate-200/70 backdrop-blur transition hover:-translate-y-1 hover:shadow-lg"
-            >
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-100 to-rose-100">
-                <Icon className="h-5 w-5 text-orange-700" />
-              </div>
+        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+          {adminActions.map((item) => {
+            const Icon = item.icon;
+            const isReviews = item.title === "Product Reviews";
 
-              <h3 className="mt-4 text-xl font-bold text-slate-950">
-                {item.title}
-              </h3>
-
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                {item.description}
-              </p>
-
-              {item.href !== "#" ? (
-                <Link
-                  href={item.href}
-                  className="mt-4 inline-flex items-center text-sm font-medium text-orange-600 hover:text-orange-700"
-                >
-                  Open <ArrowRight className="ml-1 h-4 w-4" />
-                </Link>
-              ) : (
-                <div className="mt-4 text-sm font-medium text-slate-400">
-                  Coming later
+            return (
+              <div
+                key={item.title}
+                className={`rounded-[28px] border border-white/50 bg-white/90 p-6 shadow-sm ring-1 ring-slate-200/70 backdrop-blur transition hover:-translate-y-1 hover:shadow-lg ${
+                  isReviews && pendingReviews > 0
+                    ? "ring-2 ring-red-200"
+                    : ""
+                }`}
+              >
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-100 to-rose-100">
+                  <Icon className="h-5 w-5 text-orange-700" />
                 </div>
-              )}
-            </div>
-          );
-        })}
-      </section>
 
-      <section className="rounded-[32px] border border-white/50 bg-white/90 p-8 shadow-xl ring-1 ring-slate-200/70 backdrop-blur">
-        <h2 className="text-2xl font-black tracking-tight text-slate-950">
-          Current admin tools
-        </h2>
+                {/* Title + Badge */}
+                <div className="mt-4 flex items-center gap-2">
+                  <h3 className="text-xl font-bold text-slate-950">
+                    {item.title}
+                  </h3>
 
-        <p className="mt-3 text-sm leading-6 text-slate-600">
-          The first live admin tool is the customer data request review page.
-          Next, we can add support ticket review, user management, and role
-          controls step by step.
-        </p>
+                  {isReviews && pendingReviews > 0 ? (
+                    <span className="rounded-full bg-red-600 px-2 py-1 text-xs font-black text-white">
+                      {pendingReviews}
+                    </span>
+                  ) : null}
+                </div>
 
-        <div className="mt-6">
-          <Link
-            href="/admin/data-requests"
-            className="inline-flex items-center justify-center rounded-2xl bg-slate-950 px-6 py-3 text-sm font-medium text-white shadow-lg shadow-slate-900/10 transition hover:bg-slate-800"
-          >
-            Review data requests <ArrowRight className="ml-2 h-4 w-4" />
-          </Link>
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  {item.description}
+                </p>
+
+                {item.href !== "#" ? (
+                  <Link
+                    href={item.href}
+                    className="mt-4 inline-flex items-center text-sm font-medium text-orange-600 hover:text-orange-700"
+                  >
+                    Open →
+                  </Link>
+                ) : (
+                  <div className="mt-4 text-sm font-medium text-slate-400">
+                    Coming soon
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </section>
     </ProtectedShell>

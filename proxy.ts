@@ -10,9 +10,42 @@ function isProtectedPath(pathname: string): boolean {
   );
 }
 
-export function proxy(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+const allowedDuringMaintenance = [
+  "/maintenance",
+  "/auth",
+  "/api/auth",
+  "/api/admin",
+  "/admin",
+  "/api/public/maintenance",
+  "/_next",
+  "/favicon.ico",
+];
 
+export async function proxy(request: NextRequest) {
+  const { pathname, origin } = request.nextUrl;
+
+  // ✅ Allow essential routes always
+  const allowed = allowedDuringMaintenance.some((path) =>
+    pathname.startsWith(path)
+  );
+
+  if (!allowed) {
+    try {
+      const response = await fetch(`${origin}/api/public/maintenance`, {
+        cache: "no-store",
+      });
+
+      const data = (await response.json()) as { enabled?: boolean };
+
+      if (data.enabled) {
+        return NextResponse.redirect(new URL("/maintenance", request.url));
+      }
+    } catch {
+      // fail silently
+    }
+  }
+
+  // ✅ Existing auth logic (unchanged)
   if (!isProtectedPath(pathname)) {
     return NextResponse.next();
   }
@@ -38,23 +71,11 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
-  if (
-    pathname.startsWith("/support") &&
-    session.role !== "ADMIN" &&
-    session.role !== "SUPPORT" &&
-    session.role !== "TEAM"
-  ) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
-  }
-
   return NextResponse.next();
 }
 
 export const config = {
   matcher: [
-    "/dashboard/:path*",
-    "/admin/:path*",
-    "/support/:path*",
-    "/settings/:path*",
+    "/((?!.*\\..*).*)", // apply globally (needed for maintenance)
   ],
 };

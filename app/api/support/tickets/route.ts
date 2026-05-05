@@ -3,50 +3,41 @@ import { cookies } from "next/headers";
 import { db } from "@/lib/db";
 import { parseSessionValue, SESSION_COOKIE_NAME } from "@/lib/auth/session";
 
-type CreateTicketBody = {
+type Body = {
   subject?: string;
-  category?: string;
   message?: string;
+  category?: string;
 };
 
 export async function POST(request: Request) {
   try {
     const cookieStore = await cookies();
     const rawSession = cookieStore.get(SESSION_COOKIE_NAME)?.value;
-
-    if (!rawSession) {
-      return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
-    }
-
-    const session = parseSessionValue(rawSession);
+    const session = rawSession ? parseSessionValue(rawSession) : null;
 
     if (!session) {
-      return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+      return NextResponse.json(
+        { error: "Please sign in before creating a support ticket." },
+        { status: 401 }
+      );
     }
 
-    const body = (await request.json()) as CreateTicketBody;
+    const body = (await request.json()) as Body;
 
-    const subject = body.subject?.trim() ?? "";
-    const category = body.category?.trim() ?? "";
-    const message = body.message?.trim() ?? "";
+    const subject = body.subject?.trim() || "";
+    const message = body.message?.trim() || "";
+    const category = body.category?.trim() || "GENERAL";
 
-    if (subject.length < 5) {
+    if (!subject) {
       return NextResponse.json(
-        { error: "Subject must be at least 5 characters." },
+        { error: "Subject is required." },
         { status: 400 }
       );
     }
 
-    if (!category) {
+    if (!message || message.length < 10) {
       return NextResponse.json(
-        { error: "Category is required." },
-        { status: 400 }
-      );
-    }
-
-    if (message.length < 10) {
-      return NextResponse.json(
-        { error: "Message must be at least 10 characters." },
+        { error: "Please describe your issue clearly." },
         { status: 400 }
       );
     }
@@ -55,30 +46,22 @@ export async function POST(request: Request) {
       data: {
         customerId: session.userId,
         subject,
-        category,
         message,
+        category,
         status: "OPEN",
         priority: "NORMAL",
-      },
-      select: {
-        id: true,
-        subject: true,
-        category: true,
-        status: true,
-        priority: true,
-        createdAt: true,
       },
     });
 
     return NextResponse.json({
-      message: "Support ticket submitted successfully.",
+      message: "Support ticket created successfully.",
       ticket,
     });
   } catch (error) {
-    console.error("CREATE_SUPPORT_TICKET_ERROR", error);
+    console.error("SUPPORT_TICKET_CREATE_ERROR", error);
 
     return NextResponse.json(
-      { error: "Unable to submit support ticket right now." },
+      { error: "Unable to create support ticket." },
       { status: 500 }
     );
   }

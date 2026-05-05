@@ -6,7 +6,10 @@ import {
 } from "@/lib/constants/countries";
 import { db } from "@/lib/db";
 import { hashPassword } from "@/lib/auth/password";
+import { resolveRoleFromEmail } from "@/lib/auth/admin";
 import { createRawToken, hashToken } from "@/lib/auth/tokens";
+import { sendEmail } from "@/lib/email";
+import { verificationEmailTemplate } from "@/lib/emailTemplates";
 import {
   sanitizeLocalPhoneDigits,
   validateConfirmPassword,
@@ -33,9 +36,7 @@ function validateFullPhoneAgainstCountry(
 ): string | null {
   const rule = COUNTRY_PHONE_RULES[country];
 
-  if (!fullPhone) {
-    return "Phone number is required.";
-  }
+  if (!fullPhone) return "Phone number is required.";
 
   if (!fullPhone.startsWith(rule.dialCode)) {
     return `Phone number must start with ${rule.dialCode} for ${country}.`;
@@ -49,9 +50,7 @@ function validateFullPhoneAgainstCountry(
     return `Phone number for ${country} must be exactly ${rule.localDigits} digits after ${rule.dialCode}.`;
   }
 
-  const expectedFullNumber = `${rule.dialCode}${localPart}`;
-
-  if (fullPhone !== expectedFullNumber) {
+  if (fullPhone !== `${rule.dialCode}${localPart}`) {
     return "Phone number format is invalid.";
   }
 
@@ -98,6 +97,7 @@ export async function POST(request: Request) {
       country as EastAfricaCountry,
       phone
     );
+
     if (phoneError) {
       return NextResponse.json({ error: phoneError }, { status: 400 });
     }
@@ -111,6 +111,7 @@ export async function POST(request: Request) {
       password,
       confirmPassword
     );
+
     if (confirmPasswordError) {
       return NextResponse.json(
         { error: confirmPasswordError },
@@ -131,6 +132,7 @@ export async function POST(request: Request) {
     }
 
     const passwordHash = hashPassword(password);
+    const role = resolveRoleFromEmail(email);
 
     const user = await db.user.create({
       data: {
@@ -145,10 +147,13 @@ export async function POST(request: Request) {
         authProvider: "CREDENTIALS",
         onboardingCompleted: true,
         status: "PENDING",
+        role,
       },
       select: {
         id: true,
         email: true,
+        firstName: true,
+        lastName: true,
       },
     });
 
@@ -167,10 +172,27 @@ export async function POST(request: Request) {
     const appUrl = process.env.APP_URL || "http://localhost:3000";
     const verifyUrl = `${appUrl}/api/auth/verify-email?token=${rawToken}`;
 
+    try {
+      const name =
+        [user.firstName, user.lastName].filter(Boolean).join(" ") || "Customer";
+
+      await sendEmail({
+        to: user.email,
+        subject: "Verify your STN Commerce account",
+        html: verificationEmailTemplate({
+          name,
+          verifyUrl,
+        }),
+        text: `Verify your STN Commerce account: ${verifyUrl}`,
+      });
+    } catch (emailError) {
+      console.error("REGISTER_VERIFICATION_EMAIL_ERROR", emailError);
+    }
+
     return NextResponse.json(
       {
         message:
-          "Account created successfully. Verify your email before logging in.",
+          "Account created successfully. Check your email to verify your account before logging in.",
         developmentVerifyUrl:
           process.env.NODE_ENV === "production" ? undefined : verifyUrl,
       },

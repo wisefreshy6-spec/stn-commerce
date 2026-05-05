@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import GoogleSignInButton from "@/components/auth/GoogleSignInButton";
 import {
   COUNTRY_PHONE_RULES,
@@ -39,12 +39,20 @@ type ApiResponse = {
 
 type FieldErrors = Partial<Record<keyof RegisterForm, string>>;
 
+function safeNextPath(value: string | null) {
+  if (!value) return "";
+  if (!value.startsWith("/")) return "";
+  if (value.startsWith("//")) return "";
+  if (value.includes("://")) return "";
+  return value;
+}
+
 function getInputClass(hasError: boolean) {
   return [
     "h-11 w-full rounded-2xl border px-4 text-sm outline-none transition",
     hasError
       ? "border-red-400 bg-red-50 focus:border-red-500"
-      : "border-slate-300 focus:border-slate-950",
+      : "border-slate-300 bg-white focus:border-orange-600",
   ].join(" ");
 }
 
@@ -62,9 +70,10 @@ function PasswordChecklist({ password }: { password: string }) {
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-      <p className="mb-2 text-sm font-medium text-slate-700">
+      <p className="mb-2 text-sm font-bold text-slate-700">
         Password requirements
       </p>
+
       <div className="space-y-1">
         {checks.map((check) => (
           <div
@@ -81,8 +90,9 @@ function PasswordChecklist({ password }: { password: string }) {
   );
 }
 
-export default function RegisterPage() {
-  const router = useRouter();
+function RegisterContent() {
+  const searchParams = useSearchParams();
+  const nextPath = safeNextPath(searchParams.get("next"));
 
   const [form, setForm] = useState<RegisterForm>({
     firstName: "",
@@ -127,6 +137,10 @@ export default function RegisterPage() {
     !phoneError &&
     !passwordError &&
     !confirmPasswordError;
+
+  const loginHref = nextPath
+    ? `/auth/login?next=${encodeURIComponent(nextPath)}`
+    : "/auth/login";
 
   const handleChange = (key: keyof RegisterForm, value: string) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -236,6 +250,7 @@ export default function RegisterPage() {
         body: JSON.stringify({
           ...form,
           phone: buildFullPhoneNumber(form.country, form.phone),
+          next: nextPath || undefined,
         }),
       });
 
@@ -247,7 +262,9 @@ export default function RegisterPage() {
       }
 
       setSuccess(
-        data.message || "Account created successfully. Verify your email."
+        nextPath
+          ? "Account created successfully. Verify your email, then log in to continue."
+          : data.message || "Account created successfully. Verify your email."
       );
 
       if (data.developmentVerifyUrl) {
@@ -266,63 +283,56 @@ export default function RegisterPage() {
         confirmPassword: "",
       });
 
-      setFieldErrors({});
       setTouched({});
-
-      setTimeout(() => {
-        router.push("/auth/verify-email");
-      }, 1200);
+      setFieldErrors({});
     } catch {
-      setError("Something went wrong while creating your account.");
+      setError("Something went wrong while registering.");
     } finally {
       setLoading(false);
     }
   };
 
+  const showError = (key: keyof RegisterForm, computedError: string | null | undefined) =>
+    (touched[key] || fieldErrors[key]) && computedError;
+
   return (
     <main className="min-h-screen px-4 py-10 sm:px-6 lg:px-8">
-      <div className="mx-auto grid max-w-6xl overflow-hidden rounded-[32px] border border-white/50 bg-white/90 shadow-xl ring-1 ring-slate-200/70 backdrop-blur md:grid-cols-2">
-        <div className="hidden bg-gradient-to-br from-slate-950 via-slate-900 to-orange-600 p-8 text-white md:block">
-          <div className="inline-flex rounded-full bg-white/10 px-4 py-1 text-sm font-medium text-white">
-            Create your account
+      <div className="mx-auto grid max-w-6xl overflow-hidden rounded-[32px] border border-white/50 bg-white/90 shadow-xl ring-1 ring-slate-200/70 backdrop-blur lg:grid-cols-[0.9fr_1.1fr]">
+        <div className="hidden bg-gradient-to-br from-slate-950 via-slate-900 to-orange-600 p-8 text-white lg:block">
+          <div className="inline-flex rounded-full bg-white/10 px-4 py-1 text-sm font-bold text-white">
+            Create account
           </div>
 
           <h1 className="mt-6 text-4xl font-black leading-tight">
-            One account for all your shopping and service needs.
+            Join STN Commerce and shop across all sections.
           </h1>
 
           <p className="mt-4 text-sm leading-6 text-white/80">
-            Start with East Africa onboarding, verify email first, and keep the
-            account flow clean and secure.
+            Create one account for store browsing, checkout, orders, support,
+            and future account security features.
           </p>
 
-          <div className="mt-8 space-y-3 text-sm text-white/85">
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-              Live password checks help users before submission.
+          {nextPath ? (
+            <div className="mt-6 rounded-2xl bg-white/10 p-4 text-sm leading-6 text-white/80">
+              After signup and login, continue to:{" "}
+              <span className="font-black text-white">{nextPath}</span>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-              Invalid fields are highlighted clearly instead of failing silently.
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-              Google signup is available here too, but still does not bypass
-              onboarding or phone completion.
-            </div>
-          </div>
+          ) : null}
         </div>
 
         <div className="p-6 sm:p-8">
           <div className="mb-6">
             <h2 className="text-3xl font-black tracking-tight text-slate-950">
-              Register
+              Sign up
             </h2>
             <p className="mt-2 text-sm text-slate-500">
-              Create your account with email and password, or continue with
-              Google.
+              Fill in your details carefully. Phone number follows the selected
+              country format.
             </p>
           </div>
 
           <div className="mb-4">
-            <GoogleSignInButton label="Sign up with Google" />
+            <GoogleSignInButton label="Continue with Google" />
           </div>
 
           <div className="mb-4 flex items-center gap-3">
@@ -338,30 +348,30 @@ export default function RegisterPage() {
               <div>
                 <input
                   className={getInputClass(
-                    Boolean(touched.firstName && firstNameError)
+                    Boolean(showError("firstName", firstNameError))
                   )}
                   placeholder="First name"
                   value={form.firstName}
-                  onChange={(e) => handleChange("firstName", e.target.value)}
                   onBlur={() => handleBlur("firstName")}
+                  onChange={(e) => handleChange("firstName", e.target.value)}
                 />
-                {touched.firstName && firstNameError ? (
-                  <p className="mt-1 text-sm text-red-600">{firstNameError}</p>
+                {showError("firstName", firstNameError) ? (
+                  <p className="mt-1 text-xs text-red-600">{firstNameError}</p>
                 ) : null}
               </div>
 
               <div>
                 <input
                   className={getInputClass(
-                    Boolean(touched.lastName && lastNameError)
+                    Boolean(showError("lastName", lastNameError))
                   )}
                   placeholder="Last name"
                   value={form.lastName}
-                  onChange={(e) => handleChange("lastName", e.target.value)}
                   onBlur={() => handleBlur("lastName")}
+                  onChange={(e) => handleChange("lastName", e.target.value)}
                 />
-                {touched.lastName && lastNameError ? (
-                  <p className="mt-1 text-sm text-red-600">{lastNameError}</p>
+                {showError("lastName", lastNameError) ? (
+                  <p className="mt-1 text-xs text-red-600">{lastNameError}</p>
                 ) : null}
               </div>
             </div>
@@ -369,124 +379,118 @@ export default function RegisterPage() {
             <div>
               <input
                 type="email"
-                className={getInputClass(Boolean(touched.email && emailError))}
+                className={getInputClass(
+                  Boolean(showError("email", emailError))
+                )}
                 placeholder="Email address"
                 value={form.email}
-                onChange={(e) => handleChange("email", e.target.value)}
                 onBlur={() => handleBlur("email")}
+                onChange={(e) => handleChange("email", e.target.value)}
               />
-              {touched.email && emailError ? (
-                <p className="mt-1 text-sm text-red-600">{emailError}</p>
+              {showError("email", emailError) ? (
+                <p className="mt-1 text-xs text-red-600">{emailError}</p>
               ) : null}
             </div>
 
-            <input
-              className="h-11 w-full rounded-2xl border border-slate-300 px-4 text-sm outline-none transition focus:border-slate-950"
-              placeholder="Street address"
-              value={form.address}
-              onChange={(e) => handleChange("address", e.target.value)}
-              onBlur={() => handleBlur("address")}
-            />
-
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-[0.85fr_1.15fr]">
               <select
-                className="h-11 rounded-2xl border border-slate-300 px-4 text-sm outline-none transition focus:border-slate-950"
+                className={getInputClass(false)}
                 value={form.country}
                 onChange={(e) => handleCountryChange(e.target.value)}
                 onBlur={() => handleBlur("country")}
               >
                 {EAST_AFRICA_COUNTRIES.map((country) => (
                   <option key={country} value={country}>
-                    {country}
+                    {country} ({COUNTRY_PHONE_RULES[country].dialCode})
                   </option>
                 ))}
               </select>
 
+              <div>
+                <div className="flex overflow-hidden rounded-2xl border border-slate-300 bg-white focus-within:border-orange-600">
+                  <div className="flex h-11 items-center border-r border-slate-200 px-4 text-sm font-bold text-slate-600">
+                    {selectedPhoneRule.dialCode}
+                  </div>
+
+                  <input
+                    inputMode="numeric"
+                    className="h-11 min-w-0 flex-1 px-4 text-sm outline-none"
+                    placeholder={
+                      selectedPhoneRule.example ||
+                      `${selectedPhoneRule.localDigits} digits`
+                    }
+                    value={form.phone}
+                    onBlur={() => handleBlur("phone")}
+                    onChange={(e) => handlePhoneChange(e.target.value)}
+                  />
+                </div>
+
+                <p className="mt-1 text-xs text-slate-500">
+                  Enter exactly {selectedPhoneRule.localDigits} digits after{" "}
+                  {selectedPhoneRule.dialCode}.
+                </p>
+
+                {showError("phone", phoneError) ? (
+                  <p className="mt-1 text-xs text-red-600">{phoneError}</p>
+                ) : null}
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
               <input
-                className="h-11 rounded-2xl border border-slate-300 px-4 text-sm outline-none transition focus:border-slate-950"
-                placeholder="City / Town"
+                className={getInputClass(false)}
+                placeholder="City"
                 value={form.city}
-                onChange={(e) => handleChange("city", e.target.value)}
                 onBlur={() => handleBlur("city")}
+                onChange={(e) => handleChange("city", e.target.value)}
+              />
+
+              <input
+                className={getInputClass(false)}
+                placeholder="Address optional"
+                value={form.address}
+                onBlur={() => handleBlur("address")}
+                onChange={(e) => handleChange("address", e.target.value)}
               />
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-medium text-slate-700">
-                Phone number
-              </label>
-              <div
-                className={`flex overflow-hidden rounded-2xl border transition focus-within:border-slate-950 ${
-                  touched.phone && phoneError
-                    ? "border-red-400 bg-red-50"
-                    : "border-slate-300"
-                }`}
-              >
-                <div className="flex min-w-[88px] items-center justify-center bg-slate-100 px-3 text-sm font-medium text-slate-700">
-                  {selectedPhoneRule.dialCode}
-                </div>
-                <input
-                  inputMode="numeric"
-                  className="h-11 w-full bg-transparent px-4 text-sm outline-none"
-                  placeholder={selectedPhoneRule.example}
-                  value={form.phone}
-                  onChange={(e) => handlePhoneChange(e.target.value)}
-                  onBlur={() => handleBlur("phone")}
-                />
-              </div>
-              <p className="mt-1 text-xs text-slate-500">
-                Enter exactly {selectedPhoneRule.localDigits} digits after{" "}
-                {selectedPhoneRule.dialCode}.
-              </p>
-              {touched.phone && phoneError ? (
-                <p className="mt-1 text-sm text-red-600">{phoneError}</p>
+              <input
+                type="password"
+                className={getInputClass(
+                  Boolean(showError("password", passwordError))
+                )}
+                placeholder="Password"
+                value={form.password}
+                onBlur={() => handleBlur("password")}
+                onChange={(e) => handleChange("password", e.target.value)}
+              />
+              {showError("password", passwordError) ? (
+                <p className="mt-1 text-xs text-red-600">{passwordError}</p>
               ) : null}
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <input
-                  type="password"
-                  className={getInputClass(
-                    Boolean(touched.password && passwordError)
-                  )}
-                  placeholder="Password"
-                  value={form.password}
-                  onChange={(e) => handleChange("password", e.target.value)}
-                  onBlur={() => handleBlur("password")}
-                />
-                {touched.password && passwordError ? (
-                  <p className="mt-1 text-sm text-red-600">{passwordError}</p>
-                ) : null}
-              </div>
-
-              <div>
-                <input
-                  type="password"
-                  className={getInputClass(
-                    Boolean(touched.confirmPassword && confirmPasswordError)
-                  )}
-                  placeholder="Confirm password"
-                  value={form.confirmPassword}
-                  onChange={(e) =>
-                    handleChange("confirmPassword", e.target.value)
-                  }
-                  onBlur={() => handleBlur("confirmPassword")}
-                />
-                {touched.confirmPassword && confirmPasswordError ? (
-                  <p className="mt-1 text-sm text-red-600">
-                    {confirmPasswordError}
-                  </p>
-                ) : null}
-              </div>
+            <div>
+              <input
+                type="password"
+                className={getInputClass(
+                  Boolean(showError("confirmPassword", confirmPasswordError))
+                )}
+                placeholder="Confirm password"
+                value={form.confirmPassword}
+                onBlur={() => handleBlur("confirmPassword")}
+                onChange={(e) =>
+                  handleChange("confirmPassword", e.target.value)
+                }
+              />
+              {showError("confirmPassword", confirmPasswordError) ? (
+                <p className="mt-1 text-xs text-red-600">
+                  {confirmPasswordError}
+                </p>
+              ) : null}
             </div>
 
             <PasswordChecklist password={form.password} />
-
-            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-              Phone rule: choose a country first, then enter only the remaining
-              local digits. The full number is built automatically.
-            </div>
 
             {error ? (
               <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
@@ -503,21 +507,19 @@ export default function RegisterPage() {
             {verifyUrl ? (
               <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
                 Development verification link:{" "}
-                <a
+                <Link
                   href={verifyUrl}
-                  className="font-medium underline"
-                  target="_blank"
-                  rel="noreferrer"
+                  className="font-bold text-orange-700 underline"
                 >
-                  Open verification link
-                </a>
+                  Verify email
+                </Link>
               </div>
             ) : null}
 
             <button
               type="submit"
               disabled={loading || !basicFormValid}
-              className="h-11 w-full rounded-2xl bg-slate-950 text-sm font-medium text-white shadow-lg shadow-slate-900/10 transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
+              className="h-11 w-full rounded-2xl bg-orange-600 text-sm font-black text-white shadow-lg shadow-orange-600/20 transition hover:bg-orange-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600"
             >
               {loading ? "Creating account..." : "Create account"}
             </button>
@@ -526,8 +528,8 @@ export default function RegisterPage() {
           <p className="mt-5 text-sm text-slate-500">
             Already have an account?{" "}
             <Link
-              href="/auth/login"
-              className="font-medium text-orange-600 hover:text-orange-700"
+              href={loginHref}
+              className="font-bold text-orange-600 hover:text-orange-700"
             >
               Log in
             </Link>
@@ -535,5 +537,23 @@ export default function RegisterPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen px-4 py-10 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-3xl rounded-[32px] bg-white p-8 shadow-xl ring-1 ring-slate-200">
+            <p className="text-sm font-bold text-slate-700">
+              Loading signup...
+            </p>
+          </div>
+        </main>
+      }
+    >
+      <RegisterContent />
+    </Suspense>
   );
 }

@@ -19,6 +19,7 @@ type CompleteProfileBody = {
   phone?: string;
   address?: string;
   city?: string;
+  next?: string;
 };
 
 function validateFullPhoneAgainstCountry(

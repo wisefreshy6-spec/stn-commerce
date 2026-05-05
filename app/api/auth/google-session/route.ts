@@ -8,10 +8,24 @@ import {
 } from "@/lib/auth/session";
 import { NextResponse } from "next/server";
 
-export async function POST() {
+type Body = {
+  next?: string;
+};
+
+function safeNextPath(value: unknown) {
+  const path = typeof value === "string" ? value.trim() : "";
+
+  if (!path) return "";
+  if (!path.startsWith("/")) return "";
+  if (path.startsWith("//")) return "";
+  if (path.includes("://")) return "";
+
+  return path;
+}
+
+export async function POST(request: Request) {
   try {
     const session = await auth();
-
     const email = session?.user?.email?.toLowerCase().trim();
 
     if (!email) {
@@ -20,6 +34,9 @@ export async function POST() {
         { status: 401 }
       );
     }
+
+    const body = (await request.json().catch(() => ({}))) as Body;
+    const nextPath = safeNextPath(body.next);
 
     const user = await db.user.findUnique({
       where: { email },
@@ -55,11 +72,19 @@ export async function POST() {
       getSessionCookieOptions(true)
     );
 
-    const redirectTo = user.onboardingCompleted
-      ? user.role === "ADMIN"
-        ? "/admin"
-        : "/dashboard"
-      : "/auth/complete-profile";
+    let redirectTo = "/dashboard";
+
+    if (!user.onboardingCompleted) {
+      redirectTo = nextPath
+        ? `/auth/complete-profile?next=${encodeURIComponent(nextPath)}`
+        : "/auth/complete-profile";
+    } else if (nextPath) {
+      redirectTo = nextPath;
+    } else if (user.role === "ADMIN") {
+      redirectTo = "/admin";
+    } else if (user.role === "SUPPORT" || user.role === "TEAM") {
+      redirectTo = "/admin/support";
+    }
 
     return NextResponse.json({
       message: "Google session bridged successfully.",

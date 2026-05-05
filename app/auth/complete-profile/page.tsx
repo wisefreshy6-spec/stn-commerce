@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import ProtectedShell from "@/components/layout/ProtectedShell";
 import {
@@ -32,14 +32,26 @@ type CompleteProfileResponse = {
   error?: string;
 };
 
-export default function CompleteProfilePage() {
+function safeNextPath(value: string | null) {
+  if (!value) return "";
+  if (!value.startsWith("/")) return "";
+  if (value.startsWith("//")) return "";
+  if (value.includes("://")) return "";
+  return value;
+}
+
+function CompleteProfileContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const nextPath = safeNextPath(searchParams.get("next"));
 
   const [country, setCountry] = useState<EastAfricaCountry>("Kenya");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [city, setCity] = useState("");
-  const [authProvider, setAuthProvider] = useState<"CREDENTIALS" | "GOOGLE" | null>(null);
+  const [authProvider, setAuthProvider] = useState<
+    "CREDENTIALS" | "GOOGLE" | null
+  >(null);
   const [loadingUser, setLoadingUser] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -57,12 +69,18 @@ export default function CompleteProfilePage() {
         const data = (await response.json()) as CurrentUserResponse;
 
         if (!response.ok || !data.user) {
-          router.push("/auth/login");
+          const loginTarget = nextPath
+            ? `/auth/login?next=${encodeURIComponent(
+                `/auth/complete-profile?next=${encodeURIComponent(nextPath)}`
+              )}`
+            : "/auth/login?next=/auth/complete-profile";
+
+          router.push(loginTarget);
           return;
         }
 
         if (data.user.onboardingCompleted) {
-          router.push("/dashboard");
+          router.push(nextPath || "/dashboard");
           return;
         }
 
@@ -78,14 +96,14 @@ export default function CompleteProfilePage() {
         if (data.user.address) setAddress(data.user.address);
         if (data.user.city) setCity(data.user.city);
       } catch {
-        router.push("/auth/login");
+        router.push("/auth/login?next=/auth/complete-profile");
       } finally {
         setLoadingUser(false);
       }
     };
 
     void loadUser();
-  }, [router]);
+  }, [router, nextPath]);
 
   const phoneError = validatePhoneForCountry(country, phone);
   const formValid = !phoneError;
@@ -126,10 +144,16 @@ export default function CompleteProfilePage() {
           phone: buildFullPhoneNumber(country, phone),
           address,
           city,
+          next: nextPath || undefined,
         }),
       });
 
       const data = (await response.json()) as CompleteProfileResponse;
+
+      if (response.status === 401) {
+        router.push("/auth/login?next=/auth/complete-profile");
+        return;
+      }
 
       if (!response.ok) {
         setError(data.error || "Unable to complete your profile.");
@@ -139,7 +163,7 @@ export default function CompleteProfilePage() {
       setSuccess(data.message || "Profile completed successfully.");
 
       setTimeout(() => {
-        router.push("/dashboard");
+        router.push(nextPath || "/dashboard");
       }, 1000);
     } catch {
       setError("Something went wrong while saving your profile.");
@@ -152,7 +176,9 @@ export default function CompleteProfilePage() {
     return (
       <main className="min-h-screen px-4 py-10 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-4xl rounded-[32px] border border-white/50 bg-white/90 p-8 shadow-xl ring-1 ring-slate-200/70 backdrop-blur">
-          <p className="text-sm text-slate-600">Loading your profile...</p>
+          <p className="text-sm font-bold text-slate-600">
+            Loading your profile...
+          </p>
         </div>
       </main>
     );
@@ -178,9 +204,16 @@ export default function CompleteProfilePage() {
           will adjust automatically.
         </p>
 
+        {nextPath ? (
+          <div className="mt-5 rounded-2xl border border-orange-200 bg-orange-50 p-4 text-sm leading-6 text-orange-900">
+            After completing your profile, you will continue to{" "}
+            <span className="font-black">{nextPath}</span>.
+          </div>
+        ) : null}
+
         <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
           <select
-            className="h-11 w-full rounded-2xl border border-slate-300 bg-white px-4 text-sm outline-none transition focus:border-slate-950"
+            className="h-11 w-full rounded-2xl border border-slate-300 bg-white px-4 text-sm outline-none transition focus:border-orange-600"
             value={country}
             onChange={(e) => handleCountryChange(e.target.value)}
           >
@@ -192,12 +225,12 @@ export default function CompleteProfilePage() {
           </select>
 
           <div>
-            <label className="mb-2 block text-sm font-medium text-slate-700">
+            <label className="mb-2 block text-sm font-bold text-slate-700">
               Phone number
             </label>
 
-            <div className="flex overflow-hidden rounded-2xl border border-slate-300 bg-white focus-within:border-slate-950">
-              <div className="flex min-w-[88px] items-center justify-center bg-slate-100 px-3 text-sm font-medium text-slate-700">
+            <div className="flex overflow-hidden rounded-2xl border border-slate-300 bg-white focus-within:border-orange-600">
+              <div className="flex min-w-[88px] items-center justify-center bg-slate-100 px-3 text-sm font-bold text-slate-700">
                 {selectedPhoneRule.dialCode}
               </div>
 
@@ -221,14 +254,14 @@ export default function CompleteProfilePage() {
           </div>
 
           <input
-            className="h-11 w-full rounded-2xl border border-slate-300 bg-white px-4 text-sm outline-none transition focus:border-slate-950"
+            className="h-11 w-full rounded-2xl border border-slate-300 bg-white px-4 text-sm outline-none transition focus:border-orange-600"
             placeholder="Street address (optional)"
             value={address}
             onChange={(e) => setAddress(e.target.value)}
           />
 
           <input
-            className="h-11 w-full rounded-2xl border border-slate-300 bg-white px-4 text-sm outline-none transition focus:border-slate-950"
+            className="h-11 w-full rounded-2xl border border-slate-300 bg-white px-4 text-sm outline-none transition focus:border-orange-600"
             placeholder="City / Town (optional)"
             value={city}
             onChange={(e) => setCity(e.target.value)}
@@ -254,7 +287,7 @@ export default function CompleteProfilePage() {
           <button
             type="submit"
             disabled={saving || !formValid}
-            className="h-11 w-full rounded-2xl bg-slate-950 text-sm font-medium text-white shadow-lg shadow-slate-900/10 transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
+            className="h-11 w-full rounded-2xl bg-orange-600 text-sm font-black text-white shadow-lg shadow-orange-600/20 transition hover:bg-orange-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600"
           >
             {saving ? "Saving profile..." : "Complete profile"}
           </button>
@@ -262,13 +295,31 @@ export default function CompleteProfilePage() {
 
         <p className="mt-5 text-sm text-slate-500">
           <Link
-            href="/dashboard"
-            className="font-medium text-orange-600 hover:text-orange-700"
+            href={nextPath || "/dashboard"}
+            className="font-bold text-orange-600 hover:text-orange-700"
           >
-            Back to dashboard
+            {nextPath ? "Back to previous page" : "Back to dashboard"}
           </Link>
         </p>
       </section>
     </ProtectedShell>
+  );
+}
+
+export default function CompleteProfilePage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen px-4 py-10 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-4xl rounded-[32px] border border-white/50 bg-white/90 p-8 shadow-xl ring-1 ring-slate-200/70 backdrop-blur">
+            <p className="text-sm font-bold text-slate-600">
+              Loading profile setup...
+            </p>
+          </div>
+        </main>
+      }
+    >
+      <CompleteProfileContent />
+    </Suspense>
   );
 }
