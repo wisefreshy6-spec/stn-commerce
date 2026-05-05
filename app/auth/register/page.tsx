@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import GoogleSignInButton from "@/components/auth/GoogleSignInButton";
@@ -35,6 +35,7 @@ type ApiResponse = {
   message?: string;
   error?: string;
   developmentVerifyUrl?: string;
+  retryAfter?: number;
 };
 
 type FieldErrors = Partial<Record<keyof RegisterForm, string>>;
@@ -114,6 +115,10 @@ function RegisterContent() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [verifyUrl, setVerifyUrl] = useState("");
+
+  const [registeredEmail, setRegisteredEmail] = useState("");
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [resendingVerification, setResendingVerification] = useState(false);
 
   const selectedPhoneRule = useMemo(
     () => COUNTRY_PHONE_RULES[form.country],
@@ -226,6 +231,53 @@ function RegisterContent() {
     return Object.keys(nextErrors).length === 0;
   };
 
+useEffect(() => {
+  if (resendCooldown <= 0) return;
+
+  const timer = window.setInterval(() => {
+    setResendCooldown((current) => Math.max(0, current - 1));
+  }, 1000);
+
+  return () => window.clearInterval(timer);
+}, [resendCooldown]);
+
+const resendVerification = async () => {
+  setError("");
+  setSuccess("");
+
+  if (!registeredEmail) {
+    setError("Register first before resending verification.");
+    return;
+  }
+
+  try {
+    setResendingVerification(true);
+
+    const response = await fetch("/api/auth/resend-verification", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email: registeredEmail }),
+    });
+
+    const data = (await response.json()) as ApiResponse;
+
+    if (!response.ok) {
+      if (data.retryAfter) setResendCooldown(data.retryAfter);
+      setError(data.error || "Unable to resend verification email.");
+      return;
+    }
+
+    setResendCooldown(30);
+    setSuccess(data.message || "Verification email sent again.");
+  } catch {
+    setError("Something went wrong while resending verification.");
+  } finally {
+    setResendingVerification(false);
+  }
+};
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
@@ -270,6 +322,9 @@ function RegisterContent() {
       if (data.developmentVerifyUrl) {
         setVerifyUrl(data.developmentVerifyUrl);
       }
+
+      setRegisteredEmail(form.email.trim().toLowerCase());
+      setResendCooldown(30);
 
       setForm({
         firstName: "",
@@ -503,6 +558,28 @@ function RegisterContent() {
                 {success}
               </div>
             ) : null}
+
+            {registeredEmail ? (
+              <div className="rounded-2xl border border-orange-200 bg-orange-50 p-4 text-sm text-orange-900">
+              <p>
+                Verification sent to <strong>{registeredEmail}</strong>. Check inbox or
+                spam folder.
+              </p>
+
+              <button
+                type="button"
+                disabled={resendingVerification || resendCooldown > 0}
+                onClick={() => void resendVerification()}
+                className="mt-3 rounded-xl bg-orange-600 px-4 py-2 text-xs font-black text-white disabled:cursor-not-allowed disabled:bg-slate-300"
+              >
+                {resendingVerification
+                ? "Resending..."
+                : resendCooldown > 0
+                ? `Resend in ${resendCooldown}s`
+                : "Resend verification email"}
+              </button>
+            </div>
+          ) : null}
 
             {verifyUrl ? (
               <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">

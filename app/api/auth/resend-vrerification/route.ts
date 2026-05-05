@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { createRawToken, hashToken } from "@/lib/auth/tokens";
 import { sendEmail } from "@/lib/email";
-import { passwordResetEmailTemplate } from "@/lib/emailTemplates";
+import { verificationEmailTemplate } from "@/lib/emailTemplates";
 
-type ForgotPasswordBody = {
+type Body = {
   email?: string;
 };
 
@@ -16,8 +16,8 @@ function secondsSince(date: Date) {
 
 export async function POST(request: Request) {
   try {
-    const body = (await request.json()) as ForgotPasswordBody;
-    const email = body.email?.trim().toLowerCase() ?? "";
+    const body = (await request.json()) as Body;
+    const email = body.email?.trim().toLowerCase() || "";
 
     if (!email) {
       return NextResponse.json(
@@ -33,8 +33,9 @@ export async function POST(request: Request) {
         email: true,
         firstName: true,
         lastName: true,
+        emailVerified: true,
         status: true,
-        passwordResetTokens: {
+        verificationTokens: {
           orderBy: { createdAt: "desc" },
           take: 1,
           select: { createdAt: true },
@@ -45,11 +46,18 @@ export async function POST(request: Request) {
     if (!user || user.status === "DELETED") {
       return NextResponse.json({
         message:
-          "If that email exists in our system, a password reset link has been sent.",
+          "If the email exists and is not verified, a verification link will be sent.",
       });
     }
 
-    const lastToken = user.passwordResetTokens[0];
+    if (user.emailVerified) {
+      return NextResponse.json(
+        { error: "This email is already verified. Please log in." },
+        { status: 400 }
+      );
+    }
+
+    const lastToken = user.verificationTokens[0];
 
     if (lastToken) {
       const elapsed = secondsSince(lastToken.createdAt);
@@ -57,7 +65,7 @@ export async function POST(request: Request) {
       if (elapsed < COOLDOWN_SECONDS) {
         return NextResponse.json(
           {
-            error: `Please wait ${COOLDOWN_SECONDS - elapsed}s before requesting another reset link.`,
+            error: `Please wait ${COOLDOWN_SECONDS - elapsed}s before requesting another verification email.`,
             retryAfter: COOLDOWN_SECONDS - elapsed,
           },
           { status: 429 }
@@ -65,15 +73,15 @@ export async function POST(request: Request) {
       }
     }
 
-    await db.passwordResetToken.deleteMany({
+    await db.verificationToken.deleteMany({
       where: { userId: user.id },
     });
 
     const rawToken = createRawToken();
     const tokenHash = hashToken(rawToken);
-    const expiresAt = new Date(Date.now() + 1000 * 60 * 30);
+    const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24);
 
-    await db.passwordResetToken.create({
+    await db.verificationToken.create({
       data: {
         userId: user.id,
         tokenHash,
@@ -82,28 +90,26 @@ export async function POST(request: Request) {
     });
 
     const appUrl = process.env.APP_URL || "http://localhost:3000";
-    const resetUrl = `${appUrl}/auth/reset-password?token=${rawToken}`;
+    const verifyUrl = `${appUrl}/api/auth/verify-email?token=${rawToken}`;
+
     const name =
       [user.firstName, user.lastName].filter(Boolean).join(" ") || "Customer";
 
     await sendEmail({
       to: user.email,
-      subject: "Reset your STN Commerce password",
-      html: passwordResetEmailTemplate({ name, resetUrl }),
-      text: `Reset your STN Commerce password: ${resetUrl}`,
+      subject: "Verify your STN Commerce account",
+      html: verificationEmailTemplate({ name, verifyUrl }),
+      text: `Verify your STN Commerce account: ${verifyUrl}`,
     });
 
     return NextResponse.json({
-      message:
-        "If that email exists in our system, a password reset link has been sent.",
-      developmentResetUrl:
-        process.env.NODE_ENV === "production" ? undefined : resetUrl,
+      message: "Verification email sent. Check your inbox or spam folder.",
     });
   } catch (error) {
-    console.error("FORGOT_PASSWORD_ERROR", error);
+    console.error("RESEND_VERIFICATION_ERROR", error);
 
     return NextResponse.json(
-      { error: "Unable to process password reset right now." },
+      { error: "Unable to resend verification email right now." },
       { status: 500 }
     );
   }

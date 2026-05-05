@@ -1,19 +1,27 @@
+import { randomInt } from "crypto";
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { db } from "@/lib/db";
 import { verifyPassword } from "@/lib/auth/password";
 import { resolveRoleFromEmail } from "@/lib/auth/admin";
-import {
-  createSessionValue,
-  getSessionCookieOptions,
-  SESSION_COOKIE_NAME,
-} from "@/lib/auth/session";
+import { hashToken } from "@/lib/auth/tokens";
+import { sendEmail } from "@/lib/email";
+import { loginOtpEmailTemplate } from "@/lib/emailTemplates";
 
 type LoginBody = {
   email?: string;
   password?: string;
   rememberMe?: boolean;
 };
+
+const LOGIN_OTP_COOLDOWN_SECONDS = 30;
+
+function createOtpCode() {
+  return String(randomInt(0, 1_000_000)).padStart(6, "0");
+}
+
+function secondsSince(date: Date) {
+  return Math.floor((Date.now() - date.getTime()) / 1000);
+}
 
 export async function POST(request: Request) {
   try {
@@ -43,6 +51,11 @@ export async function POST(request: Request) {
         lastName: true,
         authProvider: true,
         onboardingCompleted: true,
+        loginOtpTokens: {
+          orderBy: { createdAt: "desc" },
+          take: 1,
+          select: { createdAt: true },
+        },
       },
     });
 
@@ -81,7 +94,11 @@ export async function POST(request: Request) {
 
     if (!user.emailVerified) {
       return NextResponse.json(
-        { error: "Verify your email before logging in." },
+        {
+          error: "Verify your email before logging in.",
+          needsVerification: true,
+          email: user.email,
+        },
         { status: 403 }
       );
     }
@@ -93,53 +110,54 @@ export async function POST(request: Request) {
       );
     }
 
-    const resolvedRole = resolveRoleFromEmail(user.email);
+    const lastOtp = user.loginOtpTokens[0];
 
-    const updatedUser =
-      resolvedRole !== user.role
-        ? await db.user.update({
-            where: { id: user.id },
-            data: { role: resolvedRole },
-            select: {
-              id: true,
-              email: true,
-              role: true,
-              firstName: true,
-              lastName: true,
-              authProvider: true,
-              emailVerified: true,
-              onboardingCompleted: true,
-            },
-          })
-        : user;
+    if (lastOtp) {
+      const elapsed = secondsSince(lastOtp.createdAt);
 
-    const sessionValue = createSessionValue({
-      userId: updatedUser.id,
-      role: updatedUser.role,
-      emailVerified: updatedUser.emailVerified,
-      onboardingCompleted: updatedUser.onboardingCompleted,
-      authProvider: updatedUser.authProvider,
-      rememberMe,
+      if (elapsed < LOGIN_OTP_COOLDOWN_SECONDS) {
+        return NextResponse.json(
+          {
+            error: `Please wait ${LOGIN_OTP_COOLDOWN_SECONDS - elapsed}s before requesting another login code.`,
+            otpRequired: true,
+            email: user.email,
+            retryAfter: LOGIN_OTP_COOLDOWN_SECONDS - elapsed,
+          },
+          { status: 429 }
+        );
+      }
+    }
+
+    await db.loginOtpToken.deleteMany({
+      where: { userId: user.id },
     });
 
-    const cookieStore = await cookies();
-    cookieStore.set(
-      SESSION_COOKIE_NAME,
-      sessionValue,
-      getSessionCookieOptions(rememberMe)
-    );
+    const code = createOtpCode();
+    const codeHash = hashToken(code);
+
+    await db.loginOtpToken.create({
+      data: {
+        userId: user.id,
+        codeHash,
+        rememberMe,
+        expiresAt: new Date(Date.now() + 1000 * 60 * 10),
+      },
+    });
+
+    const name =
+      [user.firstName, user.lastName].filter(Boolean).join(" ") || "Customer";
+
+    await sendEmail({
+      to: user.email,
+      subject: "Your STN Commerce login code",
+      html: loginOtpEmailTemplate({ name, code }),
+      text: `Your STN Commerce login code is ${code}. It expires in 10 minutes.`,
+    });
 
     return NextResponse.json({
-      message: "Login successful.",
-      user: {
-        id: updatedUser.id,
-        email: updatedUser.email,
-        role: updatedUser.role,
-        firstName: updatedUser.firstName,
-        lastName: updatedUser.lastName,
-        authProvider: updatedUser.authProvider,
-        onboardingCompleted: updatedUser.onboardingCompleted,
-      },
+      message: "Login code sent to your email.",
+      otpRequired: true,
+      email: user.email,
     });
   } catch (error) {
     console.error("LOGIN_ERROR", error);

@@ -20,6 +20,49 @@ export function verificationEmailTemplate({
   });
 }
 
+export function loginOtpEmailTemplate({
+  name,
+  code,
+}: {
+  name: string;
+  code: string;
+}) {
+  return baseEmailTemplate({
+    title: "Your STN Commerce login code",
+    preview: `Hi ${name}, use this code to complete login.`,
+    body: `
+      <p>Hi <strong>${name}</strong>,</p>
+      <p>Use the code below to complete your login.</p>
+
+      <div style="letter-spacing:10px;background:#fff7ed;border:1px solid #fed7aa;border-radius:18px;padding:18px;margin:22px 0;text-align:center;font-size:32px;font-weight:900;color:#ea580c;">
+        ${code}
+      </div>
+
+      <p>This code expires in 10 minutes. If you did not try to log in, ignore this email.</p>
+    `,
+  });
+}
+
+export function passwordResetEmailTemplate({
+  name,
+  resetUrl,
+}: {
+  name: string;
+  resetUrl: string;
+}) {
+  return baseEmailTemplate({
+    title: "Reset your STN Commerce password",
+    preview: `Hi ${name}, use this secure link to reset your password.`,
+    body: `
+      <p>Hi <strong>${name}</strong>,</p>
+      <p>We received a request to reset your STN Commerce password.</p>
+      <p>Click the button below to choose a new password. This link expires in 30 minutes.</p>
+    `,
+    buttonText: "Reset password",
+    buttonUrl: resetUrl,
+  });
+}
+
 export function orderReceiptEmailTemplate({
   name,
   invoiceNumber,

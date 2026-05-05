@@ -119,6 +119,7 @@ model User {
   supportTicketMessages SupportTicketMessage[]
   supportFeedbacks      SupportFeedback[]
   verificationTokens    VerificationToken[]
+  loginOtpTokens        LoginOtpToken[]
   passwordResetTokens   PasswordResetToken[]
   orders                Order[]
   payments              Payment[]
@@ -527,4 +528,20 @@ model Notification {
   isRead    Boolean  @default(false)
 
   createdAt DateTime @default(now())
+}
+
+model LoginOtpToken {
+  id         String   @id @default(cuid())
+  userId     String
+  codeHash   String
+  rememberMe Boolean  @default(false)
+  attempts   Int      @default(0)
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([codeHash])
+  @@index([expiresAt])
 }

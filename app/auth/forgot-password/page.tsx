@@ -1,21 +1,33 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 
 type ForgotPasswordResponse = {
   message?: string;
   error?: string;
+  retryAfter?: number;
   developmentResetUrl?: string;
 };
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
+  const [cooldown, setCooldown] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [resetUrl, setResetUrl] = useState("");
   const [submitted, setSubmitted] = useState(false);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+
+    const timer = window.setInterval(() => {
+      setCooldown((current) => Math.max(0, current - 1));
+    }, 1000);
+
+    return () => window.clearInterval(timer);
+  }, [cooldown]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -25,6 +37,11 @@ export default function ForgotPasswordPage() {
 
     if (!email.trim()) {
       setError("Email address is required.");
+      return;
+    }
+
+    if (cooldown > 0) {
+      setError(`Please wait ${cooldown}s before requesting another reset link.`);
       return;
     }
 
@@ -42,14 +59,16 @@ export default function ForgotPasswordPage() {
       const data = (await response.json()) as ForgotPasswordResponse;
 
       if (!response.ok) {
+        if (data.retryAfter) setCooldown(data.retryAfter);
         setError(data.error || "Unable to send reset request.");
         return;
       }
 
       setSubmitted(true);
+      setCooldown(30);
       setSuccess(
         data.message ||
-          "If that email exists in our system, a reset link has been prepared."
+          "If that email exists in our system, a reset link has been sent."
       );
 
       if (data.developmentResetUrl) {
@@ -75,21 +94,9 @@ export default function ForgotPasswordPage() {
           </h1>
 
           <p className="mt-4 text-sm leading-6 text-white/80">
-            Request a reset link securely. If the account exists, the system
-            prepares a reset path without exposing account details publicly.
+            Request a reset link securely. If the account exists, we email the
+            reset link without exposing account details publicly.
           </p>
-
-          <div className="mt-8 space-y-3 text-sm text-white/85">
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-              We do not reveal whether an email exists publicly.
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-              Reset links are temporary and should only be used once.
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-              Strong password rules still apply when setting the new password.
-            </div>
-          </div>
         </div>
 
         <div className="p-6 sm:p-8">
@@ -98,7 +105,7 @@ export default function ForgotPasswordPage() {
               Forgot password
             </h2>
             <p className="mt-2 text-sm text-slate-500">
-              Enter your email address and we’ll prepare a reset link.
+              Enter your email address and we’ll send a reset link.
             </p>
           </div>
 
@@ -140,18 +147,24 @@ export default function ForgotPasswordPage() {
 
             <button
               type="submit"
-              disabled={loading || !email.trim()}
+              disabled={loading || !email.trim() || cooldown > 0}
               className="h-11 w-full rounded-2xl bg-slate-950 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
             >
-              {loading ? "Preparing reset link..." : "Send reset link"}
+              {loading
+                ? "Sending reset link..."
+                : cooldown > 0
+                  ? `Resend in ${cooldown}s`
+                  : submitted
+                    ? "Resend reset link"
+                    : "Send reset link"}
             </button>
           </form>
 
           {submitted ? (
             <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
               <p className="text-sm text-slate-600">
-                Didn’t receive anything yet? Check spam/junk, then try again if
-                needed.
+                Didn’t receive anything yet? Check spam/junk, then resend after
+                the countdown.
               </p>
             </div>
           ) : null}

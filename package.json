@@ -21,7 +21,8 @@
     "react": "^19.1.0",
     "react-barcode": "^1.6.1",
     "react-dom": "^19.1.0",
-    "recharts": "^3.8.1"
+    "recharts": "^3.8.1",
+    "resend": "^6.12.2"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.2.4",
