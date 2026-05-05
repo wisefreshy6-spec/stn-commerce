@@ -1445,9 +1445,9 @@ const hasAdminSections = adminMobileSections.length > 0;
   ) : null}
 
   {!mobileProductMode ? (
-    <div className="-mx-3 mt-2 grid h-[calc(100vh-74px)] grid-cols-[96px_1fr] overflow-hidden bg-slate-100">
+    <div className="-mx-3 mt-2 grid h-[calc(100vh-74px)] w-screen max-w-[100vw] grid-cols-[118px_minmax(0,1fr)] overflow-hidden bg-slate-100">
       {/* LEFT FULL-HEIGHT CATEGORY RAIL */}
-      <div className="h-full overflow-y-auto border-r border-slate-200 bg-white">
+      <div className="h-full overflow-y-auto border-r border-slate-200 bg-white [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <button
           type="button"
           onClick={() => {
@@ -1459,80 +1459,53 @@ const hasAdminSections = adminMobileSections.length > 0;
             setShowDiscounted(false);
             setMobileProductMode(false);
           }}
-          className={`flex min-h-[64px] w-full items-center justify-center border-l-4 px-2 text-center text-[11px] font-bold transition-colors ${
+          className={`flex min-h-[72px] w-full items-center justify-center border-l-4 px-2 text-center text-[12px] font-bold leading-tight transition-colors ${
             category === ""
-              ? "border-orange-600 bg-slate-50 text-orange-700"
+              ? "border-orange-600 bg-orange-50 text-orange-700"
               : "border-transparent text-slate-700"
           }`}
         >
           All
         </button>
 
-        {hasAdminMobileCategories
-          ? adminMobileCategories.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => {
-                  setCategory(item.name);
-                  setSelectedSubCategory("");
-                  setSelectedBrand("");
-                  setSearch("");
-                  setQuery("");
-                  setShowDiscounted(false);
-                  setMobileProductMode(false);
+        {(hasAdminMobileCategories
+          ? adminMobileCategories.map((item) => item.name)
+          : allCategories
+        ).map((item) => (
+          <button
+            key={item}
+            type="button"
+            onClick={() => {
+              setCategory(item);
+              setSelectedSubCategory("");
+              setSelectedBrand("");
+              setSearch("");
+              setQuery("");
+              setShowDiscounted(false);
+              setMobileProductMode(false);
 
-                  setTimeout(() => {
-                    const el = document.getElementById(
-                      `section-${item.name.replace(/\s+/g, "-").toLowerCase()}`
-                    );
-                    el?.scrollIntoView({ behavior: "smooth", block: "start" });
-                  }, 100);
-                }}
-                className={`flex min-h-[64px] w-full items-center justify-center border-l-4 px-2 text-center text-[11px] font-bold transition-colors ${
-                  category === item.name
-                    ? "border-orange-600 bg-slate-50 text-orange-700"
-                    : "border-transparent text-slate-700"
-                }`}
-              >
-                <span className="line-clamp-2">{item.name}</span>
-              </button>
-            ))
-          : allCategories.map((item) => (
-              <button
-                key={item}
-                type="button"
-                onClick={() => {
-                  setCategory(item);
-                  setSelectedSubCategory("");
-                  setSelectedBrand("");
-                  setSearch("");
-                  setQuery("");
-                  setShowDiscounted(false);
-                  setMobileProductMode(false);
-
-                  setTimeout(() => {
-                    const el = document.getElementById(
-                      `section-${item.replace(/\s+/g, "-").toLowerCase()}`
-                    );
-                    el?.scrollIntoView({ behavior: "smooth", block: "start" });
-                  }, 100);
-                }}
-                className={`flex min-h-[64px] w-full items-center justify-center border-l-4 px-2 text-center text-[11px] font-bold transition-colors ${
-                  category === item
-                    ? "border-orange-600 bg-slate-50 text-orange-700"
-                    : "border-transparent text-slate-700"
-                }`}
-              >
-                <span className="line-clamp-2">{item}</span>
-              </button>
-            ))}
+              setTimeout(() => {
+                const el = document.getElementById(
+                  `section-${item.replace(/\s+/g, "-").toLowerCase()}`
+                );
+                el?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }, 100);
+            }}
+            className={`flex min-h-[72px] w-full items-center justify-center border-l-4 px-2 text-center text-[12px] font-bold leading-tight transition-colors ${
+              category === item
+                ? "border-orange-600 bg-orange-50 text-orange-700"
+                : "border-transparent text-slate-700"
+            }`}
+          >
+            <span className="line-clamp-2 break-words">{item}</span>
+          </button>
+        ))}
       </div>
 
       {/* RIGHT SCROLLABLE CATEGORY SECTIONS */}
       <div
         id="right-scroll-container"
-        className="h-full min-w-0 space-y-3 overflow-y-auto p-3 pb-24"
+        className="h-full min-w-0 space-y-3 overflow-y-auto p-3 pb-28 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {hasAdminMobileCategories ? (
           adminMobileCategories.map((adminCategory) => (
@@ -1545,9 +1518,12 @@ const hasAdminSections = adminMobileSections.length > 0;
               className="space-y-3"
             >
               {adminCategory.panels.map((panel) => (
-                <div key={panel.id} className="rounded-xl bg-white">
+                <div
+                  key={panel.id}
+                  className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200"
+                >
                   <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
-                    <h3 className="text-sm font-black text-slate-900">
+                    <h3 className="text-[15px] font-black tracking-wide text-slate-900">
                       {panel.title}
                     </h3>
 
@@ -1564,36 +1540,35 @@ const hasAdminSections = adminMobileSections.length > 0;
                         setCategory(adminCategory.name);
                         setMobileProductMode(true);
                       }}
-                      className="text-xs font-black text-orange-600"
+                      className="text-sm font-black text-orange-600"
                     >
                       See All
                     </button>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-3 p-3">
+                  <div className="grid grid-cols-3 gap-x-3 gap-y-5 p-4">
                     {panel.items.map((item) => (
                       <button
                         key={item.id}
                         type="button"
                         onClick={() => handleAdminMobileItemClick(item)}
-                        className="rounded-lg text-center transition active:scale-95"
+                        className="min-w-0 text-center transition active:scale-95"
                       >
-                        <div className="mx-auto flex h-16 w-full items-center justify-center rounded-lg bg-slate-50 p-2">
+                        <div className="mx-auto flex h-[74px] w-full items-center justify-center rounded-xl bg-slate-50 p-2">
                           {item.image ? (
-                            // eslint-disable-next-line @next/next/no-img-element
                             <img
                               src={item.image}
                               alt={item.name}
-                              className="h-10 max-w-[70px] object-contain"
+                              className="h-12 max-w-[76px] object-contain"
                             />
                           ) : (
-                            <span className="text-lg font-black text-slate-800">
+                            <span className="text-xl font-black text-slate-800">
                               {item.name.charAt(0).toUpperCase()}
                             </span>
                           )}
                         </div>
 
-                        <p className="mt-2 line-clamp-2 text-[11px] font-semibold text-slate-700">
+                        <p className="mt-2 line-clamp-2 text-[12px] font-semibold leading-tight text-slate-700">
                           {item.name}
                         </p>
                       </button>
@@ -1609,7 +1584,7 @@ const hasAdminSections = adminMobileSections.length > 0;
               ))}
 
               {adminCategory.panels.length === 0 ? (
-                <div className="rounded-xl bg-white p-4 text-xs font-bold text-slate-500">
+                <div className="rounded-2xl bg-white p-4 text-xs font-bold text-slate-500 ring-1 ring-slate-200">
                   No panels added for {adminCategory.name}.
                 </div>
               ) : null}
@@ -1618,9 +1593,9 @@ const hasAdminSections = adminMobileSections.length > 0;
         ) : (
           <>
             {mobileBrands.length > 0 ? (
-              <div className="rounded-xl bg-white">
+              <div className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
                 <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
-                  <h3 className="text-sm font-black text-slate-900">
+                  <h3 className="text-[15px] font-black tracking-wide text-slate-900">
                     Official Brands
                   </h3>
 
@@ -1632,13 +1607,13 @@ const hasAdminSections = adminMobileSections.length > 0;
                       setShowDiscounted(false);
                       setMobileProductMode(true);
                     }}
-                    className="text-xs font-black text-orange-600"
+                    className="text-sm font-black text-orange-600"
                   >
                     See All
                   </button>
                 </div>
 
-                <div className="grid grid-cols-3 gap-3 p-3">
+                <div className="grid grid-cols-3 gap-x-3 gap-y-5 p-4">
                   {mobileBrands.slice(0, 9).map((brand) => (
                     <button
                       key={brand}
@@ -1653,24 +1628,23 @@ const hasAdminSections = adminMobileSections.length > 0;
                         setShowDiscounted(false);
                         setMobileProductMode(true);
                       }}
-                      className="rounded-lg text-center transition active:scale-95"
+                      className="min-w-0 text-center transition active:scale-95"
                     >
-                      <div className="mx-auto flex h-16 w-full items-center justify-center rounded-lg bg-slate-50 p-2">
+                      <div className="mx-auto flex h-[74px] w-full items-center justify-center rounded-xl bg-slate-50 p-2">
                         {getBrandLogo(brand) ? (
-                          // eslint-disable-next-line @next/next/no-img-element
                           <img
                             src={getBrandLogo(brand)}
                             alt={brand}
-                            className="h-10 max-w-[70px] object-contain"
+                            className="h-12 max-w-[76px] object-contain"
                           />
                         ) : (
-                          <span className="text-lg font-black text-slate-800">
+                          <span className="text-xl font-black text-slate-800">
                             {brand.charAt(0).toUpperCase()}
                           </span>
                         )}
                       </div>
 
-                      <p className="mt-2 line-clamp-2 text-[11px] font-semibold text-slate-700">
+                      <p className="mt-2 line-clamp-2 text-[12px] font-semibold leading-tight text-slate-700">
                         {brand}
                       </p>
                     </button>
@@ -1679,215 +1653,210 @@ const hasAdminSections = adminMobileSections.length > 0;
               </div>
             ) : null}
 
-{hasAdminSections
-  ? adminMobileSections.map((section) => (
-      <div
-        key={section.id}
-        id={`section-${section.title.replace(/\s+/g, "-").toLowerCase()}`}
-        className="rounded-xl bg-white"
-      >
-        <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
-          <h3 className="text-sm font-black text-slate-900">
-            {section.title}
-          </h3>
-
-          <button
-            type="button"
-            onClick={() => {
-              setLoading(true);
-              setProducts([]);
-              setSelectedBrand("");
-              setSelectedSubCategory("");
-              setSearch("");
-              setQuery("");
-
-              if (section.type === "FLASH" || section.type === "DEALS") {
-                setShowDiscounted(true);
-                setCategory("");
-              } else {
-                setShowDiscounted(false);
-                setCategory(section.title);
-              }
-
-              setMobileProductMode(true);
-            }}
-            className="text-xs font-black text-orange-600"
-          >
-            See All
-          </button>
-        </div>
-
-        <div className="grid grid-cols-3 gap-3 p-3">
-          {section.items.map((item: any) => (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => {
-                setLoading(true);
-                setProducts([]);
-                setSearch("");
-                setQuery("");
-
-                const type = item.targetType;
-
-                if (type === "DEAL") {
-                  setShowDiscounted(true);
-                  setCategory("");
-                  setSelectedSubCategory("");
-                  setSelectedBrand("");
-                } else if (type === "BRAND") {
-                  setSelectedBrand(item.targetValue);
-                  setCategory("");
-                  setSelectedSubCategory("");
-                } else if (type === "SUBCATEGORY") {
-                  setSelectedSubCategory(item.targetValue);
-                } else {
-                  setCategory(item.targetValue);
-                  setSelectedSubCategory("");
-                }
-
-                setMobileProductMode(true);
-              }}
-              className="rounded-lg text-center transition active:scale-95"
-            >
-              <div className="mx-auto flex h-16 w-full items-center justify-center rounded-lg bg-slate-50 p-2">
-                {item.image ? (
-                  <img
-                    src={item.image}
-                    alt={item.name}
-                    className="h-10 max-w-[70px] object-contain"
-                  />
-                ) : (
-                  <span className="text-lg font-black text-slate-800">
-                    {item.name.charAt(0).toUpperCase()}
-                  </span>
-                )}
-              </div>
-
-              <p className="mt-2 line-clamp-2 text-[11px] font-semibold text-slate-700">
-                {item.name}
-              </p>
-            </button>
-          ))}
-        </div>
-      </div>
-    ))
-  : activeMobileSections.map((group) => (
-      // KEEP YOUR ORIGINAL BLOCK UNCHANGED HERE
-              <div
-                key={group.title}
-                data-section={group.title}
-                id={`section-${group.title
-                  .replace(/\s+/g, "-")
-                  .toLowerCase()}`}
-                className="rounded-xl bg-white"
-              >
-                <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
-                  <h3 className="text-sm font-black text-slate-900">
-                    {group.title}
-                  </h3>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setLoading(true);
-                      setProducts([]);
-                      setSelectedSubCategory("");
-                      setSelectedBrand("");
-                      setSearch("");
-                      setQuery("");
-
-                      if (group.title === "Flash Sales") {
-                        setShowDiscounted(true);
-                        setCategory("");
-                      } else {
-                        setShowDiscounted(false);
-
-                        if (!category) {
-                          setCategory(group.title);
-                        }
-                      }
-
-                      setMobileProductMode(true);
-                    }}
-                    className="text-xs font-black text-orange-600"
+            {hasAdminSections
+              ? adminMobileSections.map((section) => (
+                  <div
+                    key={section.id}
+                    id={`section-${section.title
+                      .replace(/\s+/g, "-")
+                      .toLowerCase()}`}
+                    className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200"
                   >
-                    See All
-                  </button>
-                </div>
+                    <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+                      <h3 className="text-[15px] font-black tracking-wide text-slate-900">
+                        {section.title}
+                      </h3>
 
-                <div className="grid grid-cols-3 gap-3 p-3">
-                  {group.items.map((item) => (
-                    <button
-                      key={`${group.title}-${item}`}
-                      type="button"
-                      onClick={() => {
-                        setLoading(true);
-                        setProducts([]);
-                        setSelectedBrand("");
-                        setSearch("");
-                        setQuery("");
-
-                        const lower = item.toLowerCase();
-                        const isBrand = [
-                          "tecno",
-                          "samsung",
-                          "infinix",
-                          "iphone",
-                          "oppo",
-                          "xiaomi",
-                          "hisense",
-                          "vitron",
-                          "tcl",
-                          "lg",
-                          "sony",
-                        ].includes(lower);
-
-                        if (group.title === "Flash Sales" || lower.includes("deal")) {
-                          setShowDiscounted(true);
-                          setCategory("");
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setLoading(true);
+                          setProducts([]);
+                          setSelectedBrand("");
                           setSelectedSubCategory("");
-                        } else if (isBrand) {
-                          setSelectedBrand(item);
-                          setCategory("Phones");
-                          setSelectedSubCategory("");
-                          setShowDiscounted(false);
-                        } else if (!category) {
-                          setCategory(item);
-                          setSelectedSubCategory("");
-                          setShowDiscounted(false);
-                        } else {
-                          setSelectedSubCategory(item);
-                          setShowDiscounted(false);
-                        }
+                          setSearch("");
+                          setQuery("");
 
-                        setMobileProductMode(true);
-                      }}
-                      className="rounded-lg text-center transition active:scale-95"
-                    >
-                      <div className="mx-auto flex h-16 w-full items-center justify-center rounded-lg bg-slate-50 p-2">
-                        {getCategoryTileImage(group.title, item) ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={getCategoryTileImage(group.title, item)}
-                            alt={item}
-                            className="h-10 max-w-[70px] object-contain"
-                          />
-                        ) : (
-                          <span className="text-2xl">
-                            {getCategoryTileIcon(group.title, item)}
-                          </span>
-                        )}
-                      </div>
+                          if (section.type === "FLASH" || section.type === "DEALS") {
+                            setShowDiscounted(true);
+                            setCategory("");
+                          } else {
+                            setShowDiscounted(false);
+                            setCategory(section.title);
+                          }
 
-                      <p className="mt-2 line-clamp-2 text-[11px] font-semibold text-slate-700">
-                        {item}
-                      </p>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
+                          setMobileProductMode(true);
+                        }}
+                        className="text-sm font-black text-orange-600"
+                      >
+                        See All
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-x-3 gap-y-5 p-4">
+                      {section.items.map((item: any) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => {
+                            setLoading(true);
+                            setProducts([]);
+                            setSearch("");
+                            setQuery("");
+
+                            const type = item.targetType;
+
+                            if (type === "DEAL") {
+                              setShowDiscounted(true);
+                              setCategory("");
+                              setSelectedSubCategory("");
+                              setSelectedBrand("");
+                            } else if (type === "BRAND") {
+                              setSelectedBrand(item.targetValue);
+                              setCategory("");
+                              setSelectedSubCategory("");
+                            } else if (type === "SUBCATEGORY") {
+                              setSelectedSubCategory(item.targetValue);
+                            } else {
+                              setCategory(item.targetValue);
+                              setSelectedSubCategory("");
+                            }
+
+                            setMobileProductMode(true);
+                          }}
+                          className="min-w-0 text-center transition active:scale-95"
+                        >
+                          <div className="mx-auto flex h-[74px] w-full items-center justify-center rounded-xl bg-slate-50 p-2">
+                            {item.image ? (
+                              <img
+                                src={item.image}
+                                alt={item.name}
+                                className="h-12 max-w-[76px] object-contain"
+                              />
+                            ) : (
+                              <span className="text-2xl">⚡</span>
+                            )}
+                          </div>
+
+                          <p className="mt-2 line-clamp-2 text-[12px] font-semibold leading-tight text-slate-700">
+                            {item.name}
+                          </p>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))
+              : activeMobileSections.map((group) => (
+                  <div
+                    key={group.title}
+                    data-section={group.title}
+                    id={`section-${group.title
+                      .replace(/\s+/g, "-")
+                      .toLowerCase()}`}
+                    className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200"
+                  >
+                    <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+                      <h3 className="text-[15px] font-black tracking-wide text-slate-900">
+                        {group.title}
+                      </h3>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setLoading(true);
+                          setProducts([]);
+                          setSelectedSubCategory("");
+                          setSelectedBrand("");
+                          setSearch("");
+                          setQuery("");
+
+                          if (group.title === "Flash Sales") {
+                            setShowDiscounted(true);
+                            setCategory("");
+                          } else {
+                            setShowDiscounted(false);
+                            if (!category) setCategory(group.title);
+                          }
+
+                          setMobileProductMode(true);
+                        }}
+                        className="text-sm font-black text-orange-600"
+                      >
+                        See All
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-x-3 gap-y-5 p-4">
+                      {group.items.map((item) => (
+                        <button
+                          key={`${group.title}-${item}`}
+                          type="button"
+                          onClick={() => {
+                            setLoading(true);
+                            setProducts([]);
+                            setSelectedBrand("");
+                            setSearch("");
+                            setQuery("");
+
+                            const lower = item.toLowerCase();
+                            const isBrand = [
+                              "tecno",
+                              "samsung",
+                              "infinix",
+                              "iphone",
+                              "oppo",
+                              "xiaomi",
+                              "hisense",
+                              "vitron",
+                              "tcl",
+                              "lg",
+                              "sony",
+                            ].includes(lower);
+
+                            if (group.title === "Flash Sales" || lower.includes("deal")) {
+                              setShowDiscounted(true);
+                              setCategory("");
+                              setSelectedSubCategory("");
+                            } else if (isBrand) {
+                              setSelectedBrand(item);
+                              setCategory("Phones");
+                              setSelectedSubCategory("");
+                              setShowDiscounted(false);
+                            } else if (!category) {
+                              setCategory(item);
+                              setSelectedSubCategory("");
+                              setShowDiscounted(false);
+                            } else {
+                              setSelectedSubCategory(item);
+                              setShowDiscounted(false);
+                            }
+
+                            setMobileProductMode(true);
+                          }}
+                          className="min-w-0 text-center transition active:scale-95"
+                        >
+                          <div className="mx-auto flex h-[74px] w-full items-center justify-center rounded-xl bg-slate-50 p-2">
+                            {getCategoryTileImage(group.title, item) ? (
+                              <img
+                                src={getCategoryTileImage(group.title, item)}
+                                alt={item}
+                                className="h-12 max-w-[76px] object-contain"
+                              />
+                            ) : (
+                              <span className="text-2xl">
+                                {getCategoryTileIcon(group.title, item)}
+                              </span>
+                            )}
+                          </div>
+
+                          <p className="mt-2 line-clamp-2 text-[12px] font-semibold leading-tight text-slate-700">
+                            {item}
+                          </p>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
           </>
         )}
       </div>
