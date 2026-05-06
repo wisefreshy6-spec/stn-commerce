@@ -4,6 +4,7 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import GoogleSignInButton from "@/components/auth/GoogleSignInButton";
+import { Eye, EyeOff } from "lucide-react";
 
 type LoginResponse = {
   message?: string;
@@ -55,6 +56,7 @@ function LoginContent() {
   const [email, setEmail] = useState("");
   const [otpEmail, setOtpEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [otp, setOtp] = useState<string[]>(["", "", "", "", "", ""]);
   const [otpStep, setOtpStep] = useState(false);
@@ -341,13 +343,29 @@ function LoginContent() {
                   onChange={(e) => setEmail(e.target.value)}
                 />
 
-                <input
-                  type="password"
-                  className="h-11 w-full rounded-2xl border border-slate-300 px-4 text-sm outline-none transition focus:border-orange-600"
-                  placeholder="Password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    className="h-11 w-full rounded-2xl border border-slate-300 px-4 pr-12 text-sm outline-none transition focus:border-orange-600"
+                    placeholder="Password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500"
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+
+                {password && password.length < 6 && (
+                  <p className="text-xs text-slate-500">
+                    Weak password. Consider using a stronger one.
+                  </p>
+                )}
 
                 <div className="flex items-center justify-between gap-4 text-sm text-slate-500">
                   <label className="flex items-center gap-2">
@@ -472,11 +490,11 @@ function LoginContent() {
             </div>
           )}
 
-          <p className="mt-5 text-sm text-slate-500">
+          <p className="text-sm text-slate-600">
             Don’t have an account?{" "}
             <Link
               href={registerHref}
-              className="font-bold text-orange-600 hover:text-orange-700"
+              className="!text-orange-600 font-semibold hover:!text-orange-700 hover:underline"
             >
               Sign up
             </Link>

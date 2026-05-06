@@ -184,7 +184,7 @@ export default function DashboardPage() {
       subtitle="A simple place to shop, manage your basket, check orders, track deliveries, and contact support."
     >
       {/* MOBILE HOME ONLY */}
-      <section className="w-full max-w-full overflow-x-hidden space-y-4 rounded-[28px] bg-slate-50 p-2 lg:hidden">
+      <section className="w-full max-w-[100vw] overflow-x-hidden space-y-4 rounded-[28px] bg-slate-50 p-2 lg:hidden">
         <Link
           href="/online-store"
           className="flex h-14 items-center rounded-[24px] border border-slate-200 bg-white px-4 shadow-sm"
@@ -208,7 +208,7 @@ export default function DashboardPage() {
             </Link>
           </div>
 
-          <div className="flex w-full max-w-full gap-3 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex w-full max-w-full gap-3 overflow-x-auto overscroll-x-contain pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {stores.map((store) => {
               const Icon = store.icon;
 
@@ -216,7 +216,7 @@ export default function DashboardPage() {
                 <Link
                   key={store.href}
                   href={store.href}
-                  className="w-[138px] shrink-0 rounded-2xl border border-slate-200 bg-slate-50 p-4"
+                  className="min-w-[130px] max-w-[130px] shrink-0 rounded-2xl border border-slate-200 bg-slate-50 p-4"
                 >
                   <Icon className="h-5 w-5 text-orange-600" />
 
@@ -246,7 +246,7 @@ export default function DashboardPage() {
             </Link>
           </div>
 
-          <div className="flex w-full max-w-full gap-2 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex w-full max-w-full gap-3 overflow-x-auto overscroll-x-contain pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {quickShopping.map((item) => (
               <Link
                 key={item.href}
@@ -267,7 +267,7 @@ export default function DashboardPage() {
             <span className="text-xs font-black text-orange-600">Tools</span>
           </div>
 
-          <div className="flex w-full max-w-full gap-2 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex w-full max-w-full gap-3 overflow-x-auto overscroll-x-contain pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {shortcuts.map((item) => (
               <Link
                 key={item.href}
@@ -302,7 +302,7 @@ export default function DashboardPage() {
               No active products yet. Add products from admin store manager.
             </div>
           ) : (
-            <div className="flex w-full max-w-full gap-3 overflow-x-auto scroll-smooth snap-x snap-mandatory pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="flex w-full max-w-full gap-3 overflow-x-auto overscroll-x-contain scroll-smooth snap-x snap-mandatory pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {mobileDeals.map((product) => {
                 const finalPrice = discountedPrice(
                   product.price,
@@ -315,7 +315,7 @@ export default function DashboardPage() {
                   <Link
                     key={product.id}
                     href={`/online-store/${product.id}`}
-                    className="w-[136px] shrink-0 snap-start rounded-2xl border border-slate-200 bg-white p-3 shadow-sm transition active:scale-[0.98]"
+                    className="min-w-[130px] max-w-[130px] shrink-0 snap-start rounded-2xl border border-slate-200 bg-white p-3 shadow-sm transition active:scale-[0.98]"
                   >
                     <div className="relative flex h-24 items-center justify-center overflow-hidden rounded-xl bg-slate-100">
                       {product.imageUrl ? (

@@ -4,6 +4,7 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import GoogleSignInButton from "@/components/auth/GoogleSignInButton";
+import { Eye, EyeOff } from "lucide-react";
 import {
   COUNTRY_PHONE_RULES,
   EAST_AFRICA_COUNTRIES,
@@ -106,6 +107,9 @@ function RegisterContent() {
     password: "",
     confirmPassword: "",
   });
+
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [touched, setTouched] = useState<
@@ -510,40 +514,67 @@ const resendVerification = async () => {
             </div>
 
             <div>
-              <input
-                type="password"
-                className={getInputClass(
-                  Boolean(showError("password", passwordError))
-                )}
-                placeholder="Password"
-                value={form.password}
-                onBlur={() => handleBlur("password")}
-                onChange={(e) => handleChange("password", e.target.value)}
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  className={getInputClass(
+                    Boolean(showError("password", passwordError))
+                  )}
+                  placeholder="Password"
+                  value={form.password}
+                  onBlur={() => handleBlur("password")}
+                  onChange={(e) => handleChange("password", e.target.value)}
+                />
+
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+
               {showError("password", passwordError) ? (
                 <p className="mt-1 text-xs text-red-600">{passwordError}</p>
               ) : null}
             </div>
 
             <div>
-              <input
-                type="password"
-                className={getInputClass(
-                  Boolean(showError("confirmPassword", confirmPasswordError))
-                )}
-                placeholder="Confirm password"
-                value={form.confirmPassword}
-                onBlur={() => handleBlur("confirmPassword")}
-                onChange={(e) =>
-                  handleChange("confirmPassword", e.target.value)
-                }
-              />
+              <div className="relative">
+                <input
+                  type={showConfirmPassword ? "text" : "password"}
+                  className={getInputClass(
+                    Boolean(showError("confirmPassword", confirmPasswordError))
+                  )}
+                  placeholder="Confirm password"
+                  value={form.confirmPassword}
+                  onBlur={() => handleBlur("confirmPassword")}
+                  onChange={(e) =>
+                    handleChange("confirmPassword", e.target.value)
+                  }
+                />
+
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword((prev) => !prev)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500"
+                >
+                  {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
               {showError("confirmPassword", confirmPasswordError) ? (
                 <p className="mt-1 text-xs text-red-600">
                   {confirmPasswordError}
                 </p>
               ) : null}
             </div>
+
+            {form.password && form.password.length < 8 && (
+              <div className="rounded-xl bg-yellow-50 border border-yellow-200 p-3 text-xs text-yellow-700">
+                This password is weak. Try adding numbers, symbols, or making it longer.
+              </div>
+            )}
 
             <PasswordChecklist password={form.password} />
 
@@ -602,11 +633,11 @@ const resendVerification = async () => {
             </button>
           </form>
 
-          <p className="mt-5 text-sm text-slate-500">
+          <p className="text-sm text-slate-600">
             Already have an account?{" "}
             <Link
               href={loginHref}
-              className="font-bold text-orange-600 hover:text-orange-700"
+              className="!text-orange-600 font-semibold hover:!text-orange-700 hover:underline"
             >
               Log in
             </Link>

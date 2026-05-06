@@ -32,12 +32,17 @@ export default function GoogleSignInButton({
   };
 
   return (
-    <button
-      type="button"
-      onClick={handleGoogleSignIn}
-      className="h-11 w-full rounded-2xl border border-slate-300 bg-white text-sm font-bold text-slate-700 transition hover:bg-slate-50"
-    >
-      {label}
-    </button>
-  );
+  <button
+    type="button"
+    onClick={handleGoogleSignIn}
+    className="flex h-11 w-full items-center justify-center gap-3 rounded-2xl border border-[#dadce0] bg-white px-4 text-sm font-medium text-[#3c4043] shadow-sm transition hover:bg-slate-50"
+  >
+    <img
+      src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
+      alt="Google"
+      className="h-5 w-5"
+    />
+    {label}
+  </button>
+);
 }
